@@ -34,7 +34,7 @@ it, never at your own home:
 
 ```
 pnpm demo:home
-RECLAIM_HOME=.demo-home pnpm dev:desktop
+RECLAIM_HOME="$PWD/.demo-home" pnpm dev:desktop
 ```
 
 Paths arriving from the renderer are re-checked in main (`partitionRemovable`):

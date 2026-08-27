@@ -23,7 +23,9 @@ const files: Record<string, { size: number; ageDays?: number }> = {
   'Library/Caches/pypoetry/artifacts/requests-2.32.whl': { size: 240_000 },
   'Library/Developer/Xcode/DerivedData/App-abc/Build/bin': { size: 310_000_000, ageDays: 40 },
   'Library/Developer/Xcode/DerivedData/Fresh-xyz/out.o': { size: 5_000_000, ageDays: 1 },
-  'Library/Logs/DiagnosticReports/crash-1.ips': { size: 240_000 },
+  'Library/Logs/DiagnosticReports/crash-1.ips': { size: 240_000, ageDays: 60 },
+  // Written today: the age filter should leave this one alone.
+  'Library/Logs/Homebrew/brew.log': { size: 180_000 },
   // Deliberately outside the allowlist: nothing should ever touch this.
   'Documents/thesis.pdf': { size: 3_000_000 },
 }
@@ -42,4 +44,6 @@ for (const [relative, spec] of Object.entries(files)) {
 }
 
 console.log(`demo home at ${root}`)
-console.log(`RECLAIM_HOME=${root} pnpm --filter @mp/desktop dev`)
+console.log('')
+console.log('The path must be absolute - Electron runs with apps/desktop as its cwd:')
+console.log(`  RECLAIM_HOME=${root} pnpm dev:desktop`)

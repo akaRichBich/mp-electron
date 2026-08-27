@@ -1,4 +1,6 @@
+import { statSync } from 'node:fs'
 import { homedir } from 'node:os'
+import { resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import {
   BrowserWindow,
@@ -24,9 +26,18 @@ import { CHANNELS, type Boot, type RemoveResult } from '../shared/ipc'
  * RECLAIM_HOME re-roots the whole app at a throwaway directory. That is how
  * this gets demoed and tested without deleting anyone's real caches.
  */
-const home = process.env['RECLAIM_HOME'] ?? homedir()
+// RECLAIM_HOME may be written relative, but Electron's cwd is apps/desktop,
+// not wherever it was typed. Resolve it, and say so when it does not exist -
+// an empty report from a missing directory looks exactly like a clean disk.
+const override = process.env['RECLAIM_HOME']
+const home = override ? resolve(override) : homedir()
 const demo = home !== homedir()
+const homeExists = statSync(home, { throwIfNoEntry: false })?.isDirectory() ?? false
 const port = new NodeFsPort(home)
+
+if (demo && !homeExists) {
+  console.error(`[reclaim] RECLAIM_HOME=${override} resolved to ${home}, which does not exist`)
+}
 
 let win: BrowserWindow | null = null
 let tray: Tray | null = null
@@ -38,6 +49,9 @@ function asset(name: string): string {
 }
 
 async function runScan(options: { notify: boolean }): Promise<ScanReport> {
+  if (!homeExists) {
+    return { portId: port.id, capabilities: port.capabilities, findings: [], skipped: [], totalBytes: 0 }
+  }
   if (scanning && lastReport) return lastReport
   scanning = true
   try {
@@ -129,7 +143,7 @@ function createTray() {
 }
 
 ipcMain.on(CHANNELS.boot, (event) => {
-  const boot: Boot = { home, demo, capabilities: SHELL_CAPABILITIES.desktop }
+  const boot: Boot = { home, demo, homeExists, capabilities: SHELL_CAPABILITIES.desktop }
   event.returnValue = boot
 })
 

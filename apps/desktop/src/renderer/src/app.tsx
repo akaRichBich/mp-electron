@@ -82,9 +82,20 @@ export function App() {
       </Rail>
 
       <main className="main">
-        {api.boot.demo && (
+        {api.boot.demo && api.boot.homeExists && (
           <div className="demo-banner">
             demo home · RECLAIM_HOME={api.boot.home} · nothing outside this directory is touched
+          </div>
+        )}
+
+        {!api.boot.homeExists && (
+          <div className="panel" data-tone="error" style={{ marginBottom: '1.5rem' }}>
+            <h3>RECLAIM_HOME does not exist</h3>
+            <p>
+              It resolved to <code>{api.boot.home}</code>. A relative path is resolved against
+              Electron's working directory (<code>apps/desktop</code>), not the shell you typed it
+              in - pass an absolute one. Run <code>pnpm demo:home</code> and use the path it prints.
+            </p>
           </div>
         )}
 
@@ -104,7 +115,11 @@ export function App() {
         <hr className="rule" />
 
         <div className="actions">
-          <button className="button" onClick={() => void rescan()} disabled={scanning || busy}>
+          <button
+            className="button"
+            onClick={() => void rescan()}
+            disabled={scanning || busy || !api.boot.homeExists}
+          >
             {scanning ? 'scanning…' : report ? 'scan again' : 'scan now'}
           </button>
           <span className="ghost">

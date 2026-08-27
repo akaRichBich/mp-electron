@@ -506,6 +506,11 @@ body::after {
   line-height: 1.65;
 }
 
+.panel[data-tone='error'] {
+  border-color: var(--danger);
+  background: linear-gradient(180deg, rgba(229, 72, 77, 0.08), transparent);
+}
+
 .panel[data-tone='warn'] {
   border-color: var(--signal-dim);
   background: linear-gradient(180deg, rgba(255, 176, 32, 0.06), transparent);

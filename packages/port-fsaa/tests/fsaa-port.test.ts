@@ -43,14 +43,14 @@ class FakeDir {
   }
 }
 
-/** Build the part of the fixture that lives under `MOUNT`, as handles. */
-function mountedHandle(): FileSystemDirectoryHandle {
-  const root = new FakeDir('Caches')
+/** Build the part of the fixture that lives under `mount`, as handles. */
+function mountedHandle(mount: string = MOUNT): FileSystemDirectoryHandle {
+  const root = new FakeDir(mount.split('/').at(-1)!)
   for (const [logical, value] of Object.entries(typed.files)) {
-    if (!logical.startsWith(`${MOUNT}/`)) continue
+    if (!logical.startsWith(`${mount}/`)) continue
     const size = typeof value === 'number' ? value : value.size
     const ageDays = typeof value === 'number' ? 0 : (value.ageDays ?? 0)
-    const segments = logical.slice(MOUNT.length + 1).split('/')
+    const segments = logical.slice(mount.length + 1).split('/')
     let dir = root
     for (const segment of segments.slice(0, -1)) {
       let next = dir.children.get(segment)
@@ -66,7 +66,7 @@ function mountedHandle(): FileSystemDirectoryHandle {
   return root as unknown as FileSystemDirectoryHandle
 }
 
-const port = () => new FsaaFsPort(mountedHandle(), MOUNT)
+const port = (mount: string = MOUNT) => new FsaaFsPort(mountedHandle(mount), mount)
 
 describe('FsaaFsPort', () => {
   it('walks the picked folder and matches the fake port over the same mount', async () => {
@@ -96,5 +96,13 @@ describe('FsaaFsPort', () => {
 
   it('does not reach outside its mount', async () => {
     expect(await port().stat('~/Documents/thesis.pdf')).toBeNull()
+  })
+
+  it('matches a glob rooted at the mount itself', async () => {
+    // `stale-app-logs` globs directly on ~/Library/Logs, which is the picked
+    // folder - so resolving the empty relative path has to return the root.
+    const logs = '~/Library/Logs'
+    const report = await scan(port(logs), allRules(), { now: FIXTURE_NOW })
+    expect(report.findings.map((f) => f.path)).toEqual(['~/Library/Logs/DiagnosticReports'])
   })
 })

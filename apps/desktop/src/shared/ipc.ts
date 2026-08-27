@@ -15,6 +15,8 @@ export interface Boot {
   home: string
   /** True when RECLAIM_HOME points somewhere other than the real home. */
   demo: boolean
+  /** False when the resolved home is not a directory - scanning is pointless. */
+  homeExists: boolean
   capabilities: PortCapabilities
 }
 

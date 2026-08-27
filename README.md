@@ -153,7 +153,19 @@ The desktop app deletes files for real, so point it at a throwaway tree:
 
 ```bash
 pnpm demo:home
-RECLAIM_HOME=.demo-home pnpm dev:desktop
+RECLAIM_HOME="$PWD/.demo-home" pnpm dev:desktop
+```
+
+`RECLAIM_HOME` must be absolute - Electron's working directory is
+`apps/desktop`, not the shell you typed it in. A relative path used to produce
+an empty report that looked exactly like a clean disk; now the app resolves it
+and says so on screen.
+
+To see what the rules would report without any UI at all:
+
+```bash
+pnpm dry-run                        # every rule, this machine, read-only
+pnpm dry-run --rule stale-app-logs
 ```
 
 ## Status

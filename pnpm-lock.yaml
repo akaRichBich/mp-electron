@@ -8,6 +8,12 @@ importers:
 
   .:
     devDependencies:
+      '@mp/core':
+        specifier: workspace:^
+        version: link:packages/core
+      '@mp/port-node':
+        specifier: workspace:^
+        version: link:packages/port-node
       '@types/node':
         specifier: ^22.10.2
         version: 22.20.1
