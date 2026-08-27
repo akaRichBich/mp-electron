@@ -20,13 +20,15 @@ import {
  *    is a read-only preview; `removeEntry()` would work with a readwrite grant,
  *    and enabling it is a deliberate change to this file, not a config flag.
  */
+export const FSAA_CAPABILITIES: PortCapabilities = {
+  canDelete: false,
+  canScanWithoutPicker: false,
+  canRunInBackground: false,
+}
+
 export class FsaaFsPort implements FsPort {
   readonly id = 'fsaa'
-  readonly capabilities: PortCapabilities = {
-    canDelete: false,
-    canScanWithoutPicker: false,
-    canRunInBackground: false,
-  }
+  readonly capabilities = FSAA_CAPABILITIES
 
   /**
    * @param root   the directory handle from `showDirectoryPicker()`

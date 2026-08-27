@@ -37,6 +37,19 @@ One honesty note: `canDelete: false` on the web port is a product decision, not
 an API limit. The File System Access API can remove entries with a readwrite
 grant. Turning it on is a deliberate edit to that file.
 
+`apps/web` is that shell, built on the same core:
+
+- the capability matrix in the rail is rendered from `port.capabilities`, so
+  the three dark lamps in the `web` column are data, not a screenshot
+- rules outside the picked folder appear under *not evaluated here* with the
+  reason the engine gave
+- the last report per mount is kept in IndexedDB, so an offline launch still
+  shows something
+- service worker and manifest via `vite-plugin-pwa`; it installs
+
+`showDirectoryPicker()` is Chromium-only today, and the app says so plainly
+instead of failing - Firefox and Safari get an explanation, not a blank page.
+
 ## The harness: rules that cannot be written wrong
 
 The fake port exists for the two shells - and it turned out to be the thing
@@ -97,9 +110,20 @@ Level: safe to delete.
 Merge stays with an engineer - but review is a minute, because every machine
 check is already green.
 
+## Running it
+
+```bash
+pnpm install
+pnpm gates        # typecheck, arch guard, tests, evals, PWA build
+pnpm --filter @mp/web dev
+```
+
 ## Status
 
-Core, all three ports, and the harness are done and green
-(`pnpm install && pnpm gates`). The two shells - `apps/web` (PWA) and
-`apps/desktop` (Electron) - are next. That order is the point: build a shell
-first and platform code leaks into the domain.
+Core, all three ports, the harness, and the PWA (`apps/web`) are done and
+green. `apps/desktop` (Electron) is next; it needs no change to the core,
+only the `NodeFsPort` that already exists and passes a contract test against
+the fake port.
+
+That build order is the point: start with a shell and platform code leaks into
+the domain.

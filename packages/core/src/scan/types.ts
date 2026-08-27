@@ -28,4 +28,6 @@ export interface ScanOptions {
   /** Injected so a scan over a fixture is byte-for-byte reproducible. */
   now?: number
   onlyRules?: string[]
+  /** Called before each rule, so a shell can show real progress, not a spinner. */
+  onProgress?: (progress: { done: number; total: number; ruleId: string }) => void
 }

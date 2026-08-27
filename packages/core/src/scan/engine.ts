@@ -19,8 +19,10 @@ export async function scan(port: FsPort, rules: Rule[], opts: ScanOptions = {}):
   const findings: Finding[] = []
   const skipped: SkippedRule[] = []
 
-  for (const rule of rules) {
-    if (opts.onlyRules && !opts.onlyRules.includes(rule.id)) continue
+  const planned = rules.filter((rule) => !opts.onlyRules || opts.onlyRules.includes(rule.id))
+
+  for (const [index, rule] of planned.entries()) {
+    opts.onProgress?.({ done: index, total: planned.length, ruleId: rule.id })
 
     const roots = rule.matchers.map(matcherRoot)
     if (!roots.some((root) => reachable(port, root))) {
