@@ -163,14 +163,20 @@ export function App() {
                   findings={report.findings}
                   renderAction={(finding: Finding) => (
                     <>
-                      <button
-                        className="button"
-                        data-variant="quiet"
-                        disabled={busy}
-                        onClick={() => void remove([finding.path])}
-                      >
-                        remove
-                      </button>{' '}
+                      {/* `dangerous` is report-only. Main refuses it either way;
+                          this just avoids offering a button that cannot work. */}
+                      {finding.safety !== 'dangerous' && (
+                        <>
+                          <button
+                            className="button"
+                            data-variant="quiet"
+                            disabled={busy}
+                            onClick={() => void remove([finding.path])}
+                          >
+                            remove
+                          </button>{' '}
+                        </>
+                      )}
                       <button
                         className="button"
                         data-variant="quiet"

@@ -133,9 +133,14 @@ where Electron actually earns its keep:
 - a scan runs at launch, before anyone asks - the capability the browser cannot
   have - and reports through a native notification and the tray
 - deletion is real, and every path the renderer asks for is re-checked in main:
-  it must appear in the report main itself produced **and** still pass the
-  allowlist, then a native dialog asks the human. `partitionRemovable` is unit
-  tested against tampered reports.
+  it must appear in the report main itself produced, still pass the allowlist,
+  and not belong to a `dangerous` rule - then a native dialog asks the human.
+  `partitionRemovable` is unit tested against tampered reports.
+
+The three safety levels only mean anything in this shell: `safe` is what the
+bulk button collects, `review` has to be removed one at a time, and `dangerous`
+is report-only and refused by main. In the web shell the distinction is moot -
+that port cannot delete at all.
 
 Both shells render the same `packages/ui`. The only thing that differs is the
 data: the capability matrix, the presence of a delete button, whether a folder

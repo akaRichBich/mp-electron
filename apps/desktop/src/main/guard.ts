@@ -8,9 +8,10 @@ export interface Partition {
 
 /**
  * The renderer is not trusted with paths. A path may only be removed if it
- * appears in the report main itself produced *and* still passes the allowlist -
- * so neither a compromised renderer nor a stale report can widen the blast
- * radius. Everything else is refused and reported back.
+ * appears in the report main itself produced, still passes the allowlist, and
+ * belongs to a rule that is not `dangerous` - so neither a compromised renderer
+ * nor a stale report can widen the blast radius. Everything else is refused and
+ * reported back.
  */
 export function partitionRemovable(paths: readonly string[], findings: readonly Finding[]): Partition {
   const known = new Map(findings.map((finding) => [finding.path, finding]))
@@ -18,7 +19,8 @@ export function partitionRemovable(paths: readonly string[], findings: readonly 
   const refused: string[] = []
 
   for (const path of paths) {
-    if (known.has(path) && checkPath(path).ok) allowed.push(path)
+    const finding = known.get(path)
+    if (finding && finding.safety !== 'dangerous' && checkPath(path).ok) allowed.push(path)
     else refused.push(path)
   }
 

@@ -37,6 +37,15 @@ describe('partitionRemovable', () => {
     expect(partitionRemovable([path], tampered).allowed).toEqual([])
   })
 
+  it('refuses a dangerous finding even though it is in the report', () => {
+    // The contract in RuleSchema says `dangerous` is report-only. That promise
+    // is kept here, not in the UI - the renderer is not trusted to keep it.
+    const risky = { ...finding('~/Library/Caches/pip'), safety: 'dangerous' as const }
+    const result = partitionRemovable([risky.path], [risky])
+    expect(result.allowed).toEqual([])
+    expect(result.refused).toEqual([risky.path])
+  })
+
   it('bills only the paths it allowed', () => {
     const result = partitionRemovable(['~/Library/Caches/pip', '~/Documents'], report)
     expect(result.bytes).toBe(500)
