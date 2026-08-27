@@ -1,0 +1,16 @@
+{
+  "what": "Go build cache",
+  "paths": ["~/Library/Caches/go-build"],
+  "match": "whole-folder",
+  "category": "build-artifacts",
+  "safety": "safe",
+  "explain": "Compiled Go packages kept between builds. The next `go build` recreates whatever it needs.",
+  "fixture": {
+    "files": {
+      "~/Library/Caches/go-build/2f/2fa1c0de-d": 41000000,
+      "~/Library/Caches/go-build/9b/9bd4ee11-a": 18500000,
+      "~/Library/Caches/go-build/trim.txt": 900
+    }
+  },
+  "requestedBy": "qa@example.com"
+}

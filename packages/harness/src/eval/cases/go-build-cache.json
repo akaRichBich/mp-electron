@@ -1,0 +1,11 @@
+{
+  "ruleId": "go-build-cache",
+  "fixture": "packages/harness/fixtures/go-build-cache.json",
+  "expect": {
+    "minFindings": 1,
+    "neverTouches": [
+      "~/Documents",
+      "~/Desktop"
+    ]
+  }
+}

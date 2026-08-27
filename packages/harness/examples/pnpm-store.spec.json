@@ -1,0 +1,10 @@
+{
+  "what": "pnpm store",
+  "paths": ["~/Library/pnpm/store"],
+  "match": "whole-folder",
+  "category": "package-manager",
+  "safety": "safe",
+  "explain": "The pnpm content-addressable store that every node_modules on this machine links into.",
+  "fixture": { "files": { "~/Library/pnpm/store/v3/files/00/abcd": 5000000 } },
+  "requestedBy": "pm@example.com"
+}
