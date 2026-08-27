@@ -4,18 +4,28 @@
   "type": "module",
   "packageManager": "pnpm@9.15.0",
   "scripts": {
-    "typecheck": "tsc -p packages/core/tsconfig.json && tsc -p packages/port-node/tsconfig.json && tsc -p packages/port-fsaa/tsconfig.json && tsc -p packages/harness/tsconfig.json && tsc -p apps/web/tsconfig.json",
+    "typecheck": "tsc -p packages/core/tsconfig.json && tsc -p packages/port-node/tsconfig.json && tsc -p packages/port-fsaa/tsconfig.json && tsc -p packages/ui/tsconfig.json && tsc -p packages/harness/tsconfig.json && tsc -p apps/web/tsconfig.json && tsc -p apps/desktop/tsconfig.node.json && tsc -p apps/desktop/tsconfig.web.json",
     "check:arch": "tsx scripts/check-architecture.ts",
     "test": "vitest run",
     "eval": "tsx packages/harness/src/eval/run.ts",
     "rule:new": "tsx packages/harness/src/cli/rule-new.ts",
-    "gates": "pnpm typecheck && pnpm check:arch && pnpm test && pnpm eval && pnpm build:web",
-    "build:web": "pnpm --filter @mp/web build"
+    "gates": "pnpm typecheck && pnpm check:arch && pnpm test && pnpm eval && pnpm build:web && pnpm build:desktop",
+    "build:web": "pnpm --filter @mp/web build",
+    "build:desktop": "pnpm --filter @mp/desktop build",
+    "demo:home": "tsx scripts/make-demo-home.ts",
+    "dev:desktop": "pnpm --filter @mp/desktop dev",
+    "dev:web": "pnpm --filter @mp/web dev"
   },
   "devDependencies": {
     "@types/node": "^22.10.2",
     "tsx": "^4.19.2",
     "typescript": "^5.7.2",
     "vitest": "^2.1.8"
+  },
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "electron",
+      "esbuild"
+    ]
   }
 }

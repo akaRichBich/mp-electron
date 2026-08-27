@@ -1,11 +1,8 @@
 import { useEffect, useState } from 'react'
-import { allRules, scan, type ScanReport } from '@mp/core'
+import { SHELL_CAPABILITIES, allRules, scan, type ScanReport } from '@mp/core'
+import { Findings, Rail, Readout, Skipped } from '@mp/ui'
 import { MOUNTS, pickMount, pickerSupported, type Mount } from './platform'
 import { loadReports, saveReport } from './history'
-import { Findings } from './ui/Findings'
-import { Rail } from './ui/Rail'
-import { Readout } from './ui/Readout'
-import { Skipped } from './ui/Skipped'
 
 type Phase =
   | { kind: 'idle' }
@@ -68,7 +65,19 @@ export function App() {
 
   return (
     <div className="frame">
-      <Rail />
+      <Rail
+        badge="web preview"
+        portId="fsaa"
+        portLabel="File System Access API"
+        columns={[
+          { label: 'web', capabilities: SHELL_CAPABILITIES.web },
+          { label: 'app', capabilities: SHELL_CAPABILITIES.desktop },
+        ]}
+        active={0}
+      >
+        The UI reads <b>port.capabilities</b>, never <b>isElectron</b>. Both shells import the same{' '}
+        <b>@mp/core</b>; only the port under it changes.
+      </Rail>
 
       <main className="main">
         <span className="eyebrow">read-only preview</span>

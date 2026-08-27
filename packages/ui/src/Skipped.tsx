@@ -5,9 +5,7 @@ export function Skipped({ skipped }: { skipped: SkippedRule[] }) {
 
   return (
     <section className="skipped">
-      <h2 className="matrix-head" style={{ textAlign: 'left', paddingBottom: '0.6rem' }}>
-        not evaluated here
-      </h2>
+      <h2 className="section-label">not evaluated here</h2>
       <ul>
         {skipped.map((entry) => (
           <li key={entry.ruleId}>

@@ -17,6 +17,10 @@ jobs:
           node-version: 22
           cache: pnpm
       - run: pnpm install --frozen-lockfile
+        env:
+          # electron-vite compiles without the runtime binary, and CI never
+          # opens a window. Saves ~100 MB per run.
+          ELECTRON_SKIP_BINARY_DOWNLOAD: 1
 
       # Ordered cheapest-first so a generated rule fails fast and legibly.
       - name: types
@@ -27,8 +31,8 @@ jobs:
         run: pnpm test
       - name: rule evals
         run: pnpm eval
-      - name: the PWA still builds
-        run: pnpm build:web
+      - name: both shells still build
+        run: pnpm build:web && pnpm build:desktop
 
       # Scoped to branches the spec pipeline creates: a *generated rule* never
       # needs a dependency. An engineer adding a shell obviously may.

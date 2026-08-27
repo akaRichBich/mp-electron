@@ -1,10 +1,10 @@
 import {
   paths,
   PortUnsupported,
+  SHELL_CAPABILITIES,
   type FsEntry,
   type FsPort,
   type LogicalPath,
-  type PortCapabilities,
   type WalkOptions,
 } from '@mp/core'
 
@@ -20,15 +20,9 @@ import {
  *    is a read-only preview; `removeEntry()` would work with a readwrite grant,
  *    and enabling it is a deliberate change to this file, not a config flag.
  */
-export const FSAA_CAPABILITIES: PortCapabilities = {
-  canDelete: false,
-  canScanWithoutPicker: false,
-  canRunInBackground: false,
-}
-
 export class FsaaFsPort implements FsPort {
   readonly id = 'fsaa'
-  readonly capabilities = FSAA_CAPABILITIES
+  readonly capabilities = SHELL_CAPABILITIES.web
 
   /**
    * @param root   the directory handle from `showDirectoryPicker()`

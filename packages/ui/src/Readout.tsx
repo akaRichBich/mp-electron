@@ -1,5 +1,5 @@
-import { useEffect, useState } from 'react'
-import { applyScale, scaleFor } from '../format'
+import { useEffect, useState, type ReactNode } from 'react'
+import { applyScale, scaleFor } from '@mp/core'
 
 function useCountUp(target: number, duration = 800): number {
   const [value, setValue] = useState(target)
@@ -27,10 +27,12 @@ export function Readout({
   bytes,
   locations,
   scanned,
+  action,
 }: {
   bytes: number
   locations: number
   scanned: string
+  action?: ReactNode
 }) {
   const animated = useCountUp(bytes)
   const scale = scaleFor(bytes)
@@ -46,6 +48,7 @@ export function Readout({
         <br />
         scanned <span>{scanned}</span>
       </div>
+      {action && <div className="readout-action">{action}</div>}
     </div>
   )
 }

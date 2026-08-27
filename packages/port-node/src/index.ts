@@ -1,13 +1,7 @@
 import { opendir, rm, stat as fsStat } from 'node:fs/promises'
 import { homedir } from 'node:os'
 import { join as joinNative, sep } from 'node:path'
-import type {
-  FsEntry,
-  FsPort,
-  LogicalPath,
-  PortCapabilities,
-  WalkOptions,
-} from '@mp/core'
+import { SHELL_CAPABILITIES, type FsEntry, type FsPort, type LogicalPath, type WalkOptions } from '@mp/core'
 
 /**
  * The Electron-side port. Everything the desktop shell can do that a browser
@@ -16,11 +10,7 @@ import type {
  */
 export class NodeFsPort implements FsPort {
   readonly id = 'node'
-  readonly capabilities: PortCapabilities = {
-    canDelete: true,
-    canScanWithoutPicker: true,
-    canRunInBackground: true,
-  }
+  readonly capabilities = SHELL_CAPABILITIES.desktop
 
   constructor(private readonly home: string = homedir()) {}
 
@@ -78,6 +68,11 @@ export class NodeFsPort implements FsPort {
 
   async remove(path: LogicalPath): Promise<void> {
     await rm(this.toReal(path), { recursive: true, force: true })
+  }
+
+  /** Node-only escape hatch: the real path, for `shell.showItemInFolder`. */
+  realPath(path: LogicalPath): string {
+    return this.toReal(path)
   }
 
   private toReal(path: LogicalPath): string {

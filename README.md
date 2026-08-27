@@ -1,8 +1,8 @@
 # mp-electron
 
 A macOS disk-cleanup demo built to make one point: **one domain core, three
-platform ports** - and the third port is what makes an agent's code safe to
-generate.
+platform ports, two shells** - and the third port is what makes an agent's code
+safe to generate.
 
 ## One core, three platform ports
 
@@ -17,11 +17,18 @@ through one interface, `FsPort`:
 | `FsaaFsPort` | `@mp/port-fsaa` | PWA | **no** | **no** | **no** |
 
 The UI branches on `port.capabilities`, never on `isElectron`. A shell
-difference is data, not a code path.
+difference is data, not a code path - and the values come from one table,
+`SHELL_CAPABILITIES` in core, which the ports and the UI both read, so the
+matrix a user sees cannot drift from what the port does.
 
 `pnpm check:arch` fails the build if anything in `core` imports `node:*`,
-`electron`, or touches a DOM global. That guard is why the same core can be
-compiled into both shells at all.
+`electron`, or touches a DOM global, and holds `packages/ui` to the same rule
+minus the DOM. That guard is why the same core compiles into both shells.
+
+Two boundaries, not one: `FsPort` bounds the **domain**, and `ScanReport` plus
+`PortCapabilities` bounds the **UI**. The web shell happens to run both sides
+in one process; the desktop shell puts a process boundary between them. Neither
+the core nor the UI notices.
 
 ## PWA and desktop: what differs, and why
 
@@ -115,20 +122,50 @@ Level: safe to delete.
 Merge stays with an engineer - but review is a minute, because every machine
 check is already green.
 
+## The desktop shell
+
+`apps/desktop` is the same core with the other port under it, and the split is
+where Electron actually earns its keep:
+
+- the scan runs in the **main process** over `node:fs`; the renderer receives a
+  finished `ScanReport` over IPC and has no fs, no rules and no core logic
+  beyond types
+- a scan runs at launch, before anyone asks - the capability the browser cannot
+  have - and reports through a native notification and the tray
+- deletion is real, and every path the renderer asks for is re-checked in main:
+  it must appear in the report main itself produced **and** still pass the
+  allowlist, then a native dialog asks the human. `partitionRemovable` is unit
+  tested against tampered reports.
+
+Both shells render the same `packages/ui`. The only thing that differs is the
+data: the capability matrix, the presence of a delete button, whether a folder
+had to be picked.
+
 ## Running it
 
 ```bash
 pnpm install
-pnpm gates        # typecheck, arch guard, tests, evals, PWA build
-pnpm --filter @mp/web dev
+pnpm gates        # typecheck, arch guard, tests, evals, both shell builds
+pnpm dev:web
+```
+
+The desktop app deletes files for real, so point it at a throwaway tree:
+
+```bash
+pnpm demo:home
+RECLAIM_HOME=.demo-home pnpm dev:desktop
 ```
 
 ## Status
 
-Core, all three ports, the harness, and the PWA (`apps/web`) are done and
-green. `apps/desktop` (Electron) is next; it needs no change to the core,
-only the `NodeFsPort` that already exists and passes a contract test against
-the fake port.
+Core, all three ports, the harness, and both shells are done and green.
+Building the desktop shell needed no change to the core and no new rule - only
+the `NodeFsPort` that already existed and already passed a contract test
+against the fake port.
 
-That build order is the point: start with a shell and platform code leaks into
+That build order was the point: start with a shell and platform code leaks into
 the domain.
+
+Not done, and deliberately: packaging and code signing. `electron-builder`,
+notarisation and an update channel are real work that would say nothing new
+about the architecture.

@@ -634,7 +634,6 @@ body::after {
 
 .matrix {
   display: grid;
-  grid-template-columns: 1fr 1.6rem 1.6rem;
   gap: 0.15rem 0.4rem;
   align-items: center;
   font-size: 0.79rem;
@@ -694,4 +693,72 @@ body::after {
   font-style: normal;
   color: var(--faint);
   font-size: 0.7rem;
+}
+
+/* ------------------------------------------------------- shared extras --- */
+
+.section-label {
+  font-family: var(--mono);
+  font-size: 0.6rem;
+  font-weight: 500;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--faint);
+  margin: 0 0 0.7rem;
+}
+
+.matrix-head[data-active='true'] {
+  color: var(--signal);
+}
+
+.readout-action {
+  flex-basis: 100%;
+  padding-top: 0.5rem;
+}
+
+.finding-action {
+  margin-top: 0.5rem;
+}
+
+.button {
+  appearance: none;
+  font: inherit;
+  font-size: 0.86rem;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  color: var(--ink-900);
+  background: var(--signal);
+  border: 1px solid var(--signal);
+  border-radius: 2px;
+  padding: 0.6rem 1.1rem;
+  cursor: pointer;
+  transition: filter 0.16s ease, transform 0.16s ease;
+}
+
+.button:hover:not(:disabled) {
+  filter: brightness(1.12);
+}
+
+.button:active:not(:disabled) {
+  transform: translateY(1px);
+}
+
+.button:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.button[data-variant='quiet'] {
+  background: transparent;
+  color: var(--muted);
+  border-color: var(--line-hot);
+  font-size: 0.72rem;
+  font-weight: 500;
+  padding: 0.35rem 0.6rem;
+}
+
+.button[data-variant='quiet']:hover:not(:disabled) {
+  color: var(--text);
+  border-color: var(--steel);
+  filter: none;
 }

@@ -1,8 +1,15 @@
-import type { CSSProperties } from 'react'
+import type { CSSProperties, ReactNode } from 'react'
 import type { Finding } from '@mp/core'
-import { applyScale, scaleFor, shortPath } from '../format'
+import { applyScale, scaleFor, shortPath } from '@mp/core'
 
-export function Findings({ findings }: { findings: Finding[] }) {
+export function Findings({
+  findings,
+  renderAction,
+}: {
+  findings: Finding[]
+  /** The desktop shell puts a remove button here. The web shell passes nothing. */
+  renderAction?: (finding: Finding) => ReactNode
+}) {
   const largest = Math.max(...findings.map((f) => f.bytes), 1)
 
   return (
@@ -33,6 +40,7 @@ export function Findings({ findings }: { findings: Finding[] }) {
             <div className="finding-size">
               {applyScale(finding.bytes, scale)}
               <span>{scale.unit}</span>
+              {renderAction && <div className="finding-action">{renderAction(finding)}</div>}
             </div>
 
             <p className="explain">
