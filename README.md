@@ -179,11 +179,14 @@ rule was slightly wrong, so `deletionVerdict` in core fences removal to the
 with a reason.
 
 ```bash
-pnpm demo:sandbox   # ~/Library/Caches/ReclaimSandbox, with a test.txt in it
+pnpm demo:sandbox   # ReclaimSandbox, with a test.txt in it
 ```
 
-Scan `~/Library/Caches`, press remove on **Reclaim sandbox**, and it goes for
-real. Press it on anything else and the app tells you why it will not.
+It makes two, because a browser may not open anything under `~/Library`: the
+desktop app finds `~/Library/Caches/ReclaimSandbox`, and the web app finds
+`~/.cache/ReclaimSandbox` when you pick **Local caches** (press cmd-shift-. in
+the dialog to see hidden folders). Press remove on **Reclaim sandbox** and it
+goes for real. Press it on anything else and the app tells you why it will not.
 
 The web app also offers **a built-in sandbox** that needs no folder access at
 all: a tree in the Origin Private File System, which every modern browser has.

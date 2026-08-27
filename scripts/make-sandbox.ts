@@ -13,14 +13,22 @@ import { join, resolve } from 'node:path'
  */
 const index = process.argv.indexOf('--home')
 const home = index === -1 ? homedir() : resolve(process.argv[index + 1] ?? '')
-const root = join(home, 'Library', 'Caches', 'ReclaimSandbox')
+// Two of them: browsers may not open anything under ~/Library, so the web
+// shell needs a sandbox that lives somewhere it is allowed to look.
+const roots = [
+  join(home, 'Library', 'Caches', 'ReclaimSandbox'),
+  join(home, '.cache', 'ReclaimSandbox'),
+]
 
-mkdirSync(root, { recursive: true })
-writeFileSync(join(root, 'test.txt'), '')
-writeFileSync(join(root, 'sample.bin'), '')
-truncateSync(join(root, 'sample.bin'), 2_000_000)
+for (const root of roots) {
+  mkdirSync(root, { recursive: true })
+  writeFileSync(join(root, 'test.txt'), '')
+  writeFileSync(join(root, 'sample.bin'), '')
+  truncateSync(join(root, 'sample.bin'), 2_000_000)
+  console.log(`sandbox at ${root}`)
+}
 
-console.log(`sandbox at ${root}`)
-console.log('  test.txt    (empty)')
+console.log('\n  test.txt    (empty)')
 console.log('  sample.bin  (2 MB, sparse)')
-console.log('\nScan ~/Library/Caches and the "Reclaim sandbox" row will really delete.')
+console.log('\nDesktop: scan and the "Reclaim sandbox" rows really delete.')
+console.log('Web:     pick ~/.cache (cmd-shift-. shows hidden folders in the dialog).')

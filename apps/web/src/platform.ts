@@ -48,6 +48,13 @@ export const MOUNTS: Mount[] = [
     hint: 'outside ~/Library, so the browser will hand it over',
   },
   {
+    id: 'dot-cache',
+    label: 'Local caches',
+    path: '~/.cache',
+    expect: '.cache',
+    hint: 'holds the sandbox - press cmd-shift-. in the dialog to see it',
+  },
+  {
     id: 'caches',
     blockedByBrowser: true,
     label: 'Caches',

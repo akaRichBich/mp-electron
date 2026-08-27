@@ -29,6 +29,16 @@ describe('scan', () => {
     expect(a).toEqual(b)
   })
 
+  it('evaluates only the matchers the port can reach', async () => {
+    // `sandbox` looks in two places. A port that can see one of them must not
+    // report the other - the fake port can see the whole tree, so nothing but
+    // this check stops it.
+    const picked = new FakeFsPort(fixture as Fixture)
+    Object.defineProperty(picked, 'mounts', { value: () => ['~/.cache'] })
+    const report = await scan(picked, allRules(), { now: FIXTURE_NOW, onlyRules: ['sandbox'] })
+    expect(report.findings.map((f) => f.path)).toEqual(['~/.cache/ReclaimSandbox'])
+  })
+
   it('skips rules the port cannot reach instead of failing', async () => {
     const picked = new FakeFsPort(fixture as Fixture)
     Object.defineProperty(picked, 'mounts', { value: () => ['~/Library/Caches/pip'] })

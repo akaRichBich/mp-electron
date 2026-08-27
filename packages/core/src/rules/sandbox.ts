@@ -11,5 +11,10 @@ export const sandbox = defineRule({
   safety: 'safe',
   explain:
     'A folder this demo makes for itself, holding nothing of yours. The only thing v0.0.1 removes.',
-  matchers: [{ kind: 'dir', path: '~/Library/Caches/ReclaimSandbox' }],
+  // Two homes on purpose: the desktop app reaches the first, and the second is
+  // outside ~/Library, which is the only kind of folder a browser may open.
+  matchers: [
+    { kind: 'dir', path: '~/Library/Caches/ReclaimSandbox' },
+    { kind: 'dir', path: '~/.cache/ReclaimSandbox' },
+  ],
 })

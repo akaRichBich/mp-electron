@@ -24,14 +24,17 @@ export async function scan(port: FsPort, rules: Rule[], opts: ScanOptions = {}):
   for (const [index, rule] of planned.entries()) {
     opts.onProgress?.({ done: index, total: planned.length, ruleId: rule.id })
 
-    const roots = rule.matchers.map(matcherRoot)
-    if (!roots.some((root) => reachable(port, root))) {
+    // Per matcher, not per rule: a rule may look in two places, only one of
+    // which this port can reach. Evaluating the unreachable one produced
+    // findings outside the port's own mounts.
+    const inReach = rule.matchers.filter((matcher) => reachable(port, matcherRoot(matcher)))
+    if (inReach.length === 0) {
       skipped.push({ ruleId: rule.id, reason: `outside the mounts of port "${port.id}"` })
       continue
     }
 
     const before = findings.length
-    for (const matcher of rule.matchers) {
+    for (const matcher of inReach) {
       for await (const hit of matchEntries(port, matcher)) {
         const { bytes, entries, newestMtimeMs } =
           hit.kind === 'dir'
