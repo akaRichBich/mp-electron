@@ -108,6 +108,9 @@ anything is generated, and it writes three things: a fixture, an eval case, and
 a deterministic prompt. Same spec in, same prompt out - so a bad result is a
 bug in the recipe, never "the PM phrased it oddly".
 
+The full path, written for the people who use it, is in
+[docs/adding-a-rule.md](docs/adding-a-rule.md).
+
 Four constraints are administrative, enforced by machine, not by review:
 
 - **Path allowlist.** A spec pointing at `~/Documents` is rejected with a
