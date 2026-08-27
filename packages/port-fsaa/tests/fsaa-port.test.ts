@@ -41,6 +41,10 @@ class FakeDir {
     if (!child || child.kind !== 'file') throw new Error('NotFoundError')
     return child
   }
+
+  async removeEntry(name: string): Promise<void> {
+    if (!this.children.delete(name)) throw new Error('NotFoundError')
+  }
 }
 
 /** Build the part of the fixture that lives under `mount`, as handles. */
@@ -89,9 +93,21 @@ describe('FsaaFsPort', () => {
     )
   })
 
-  it('reports that it cannot delete, and refuses when asked', async () => {
-    expect(port().capabilities.canDelete).toBe(false)
-    await expect(port().remove('~/Library/Caches/pip')).rejects.toBeInstanceOf(PortUnsupported)
+  it('removes a folder inside the picked one', async () => {
+    const subject = port()
+    expect(subject.capabilities.canDelete).toBe(true)
+    expect(await subject.stat('~/Library/Caches/pip')).not.toBeNull()
+
+    await subject.remove('~/Library/Caches/pip')
+
+    expect(await subject.stat('~/Library/Caches/pip')).toBeNull()
+    expect(await subject.stat('~/Library/Caches/Homebrew')).not.toBeNull()
+  })
+
+  it.each(['~/Documents/thesis.pdf', '~/Library/Caches'])('refuses to remove %s', async (path) => {
+    // Outside the picked folder, or the picked folder itself: the port has no
+    // handle for the parent, and would not use one if it had.
+    await expect(port().remove(path)).rejects.toBeInstanceOf(PortUnsupported)
   })
 
   it('does not reach outside its mount', async () => {

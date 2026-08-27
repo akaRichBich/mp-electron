@@ -1,6 +1,13 @@
 import { useEffect, useState } from 'react'
-import { SHELL_CAPABILITIES, formatBytes, type Finding, type ScanReport } from '@mp/core'
-import { Findings, Rail, Readout, Skipped } from '@mp/ui'
+import {
+  SHELL_CAPABILITIES,
+  deletableFindings,
+  deletionVerdict,
+  formatBytes,
+  type Finding,
+  type ScanReport,
+} from '@mp/core'
+import { Findings, Notice, Rail, Readout, SafetySummary, Skipped } from '@mp/ui'
 import type { DesktopApi, ScanProgress } from '../../shared/ipc'
 
 declare global {
@@ -16,6 +23,7 @@ export function App() {
   const [progress, setProgress] = useState<ScanProgress | null>(null)
   const [busy, setBusy] = useState(false)
   const [receipt, setReceipt] = useState<{ text: string; tone: 'ok' | 'refused' } | null>(null)
+  const [notice, setNotice] = useState<{ title: string; detail: string } | null>(null)
 
   useEffect(() => {
     const offProgress = api.onProgress(setProgress)
@@ -59,8 +67,19 @@ export function App() {
     }
   }
 
-  const safe = report?.findings.filter((finding) => finding.safety === 'safe') ?? []
-  const safeBytes = safe.reduce((sum, finding) => sum + finding.bytes, 0)
+  // Only what main would actually accept, so the button never promises more
+  // than the policy allows.
+  const removable = deletableFindings(report?.findings ?? [])
+  const removableBytes = removable.reduce((sum, finding) => sum + finding.bytes, 0)
+
+  function attemptDelete(finding: Finding) {
+    const verdict = deletionVerdict(finding)
+    if (!verdict.allowed) {
+      setNotice({ title: verdict.title, detail: verdict.detail })
+      return
+    }
+    void remove([finding.path])
+  }
   const scanning = progress !== null
 
   return (
@@ -109,7 +128,8 @@ export function App() {
 
         <p className="lede">
           The same rules as the web preview, running in the main process over <code>node:fs</code>.
-          No folder picker, no tab that has to stay open - and here they can also delete.
+          No folder picker, no tab that has to stay open. Removal is real, and v0.0.1 fences it to
+          the sandbox folder so a demo cannot take anything you wanted.
         </p>
 
         <hr className="rule" />
@@ -148,30 +168,31 @@ export function App() {
                   locations={report.findings.length}
                   scanned={api.boot.home}
                   action={
-                    safe.length > 0 && (
+                    removable.length > 0 && (
                       <button
                         className="button"
                         disabled={busy}
-                        onClick={() => void remove(safe.map((finding) => finding.path))}
+                        onClick={() => void remove(removable.map((finding) => finding.path))}
                       >
-                        reclaim {safe.length} safe · {formatBytes(safeBytes)}
+                        reclaim {removable.length} · {formatBytes(removableBytes)}
                       </button>
                     )
                   }
                 />
+                <SafetySummary findings={report.findings} />
                 <Findings
                   findings={report.findings}
                   renderAction={(finding: Finding) => (
                     <>
-                      {/* `dangerous` is report-only. Main refuses it either way;
-                          this just avoids offering a button that cannot work. */}
-                      {finding.safety !== 'dangerous' && (
+                      {/* Offered for every `safe` finding; the ones this build
+                          will not touch answer with a reason instead. */}
+                      {finding.safety === 'safe' && (
                         <>
                           <button
                             className="button"
                             data-variant="quiet"
                             disabled={busy}
-                            onClick={() => void remove([finding.path])}
+                            onClick={() => attemptDelete(finding)}
                           >
                             remove
                           </button>{' '}
@@ -188,6 +209,17 @@ export function App() {
                   )}
                 />
               </>
+            )}
+
+            {notice && (
+              <div style={{ marginTop: '2rem' }}>
+                <Notice
+                  title={notice.title}
+                  detail={notice.detail}
+                  tone="plain"
+                  onDismiss={() => setNotice(null)}
+                />
+              </div>
             )}
 
             {receipt && (

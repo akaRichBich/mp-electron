@@ -14,7 +14,7 @@ through one interface, `FsPort`:
 |---|---|---|---|---|---|
 | `FakeFsPort` | `@mp/core` | tests, evals | yes (in memory) | yes | yes |
 | `NodeFsPort` | `@mp/port-node` | Electron | yes | yes | yes |
-| `FsaaFsPort` | `@mp/port-fsaa` | PWA | **no** | **no** | **no** |
+| `FsaaFsPort` | `@mp/port-fsaa` | PWA | yes, after a grant | **no** | **no** |
 
 The UI branches on `port.capabilities`, never on `isElectron`. A shell
 difference is data, not a code path - and the values come from one table,
@@ -33,16 +33,17 @@ the core nor the UI notices.
 ## PWA and desktop: what differs, and why
 
 The web build is a real product surface, not a demo of the desktop one. The
-user picks a folder, gets a report, and cannot delete anything - so the port
-serves one mount and rules outside it are reported as *skipped, with a reason*,
-which the engine treats as a normal outcome rather than a failure.
+user picks a folder and gets a report; rules outside that folder come back as
+*skipped, with a reason*, which the engine treats as a normal outcome rather
+than a failure.
 
-The desktop build gets what a browser cannot give: the whole home directory
-with no picker, background scanning from the tray, and real deletion.
+It can delete, too. The picker asks for read only, and readwrite is requested
+from the click that needs it - a scan never costs more permission than a scan
+needs.
 
-One honesty note: `canDelete: false` on the web port is a product decision, not
-an API limit. The File System Access API can remove entries with a readwrite
-grant. Turning it on is a deliberate edit to that file.
+What the desktop build has that a browser cannot: the whole home directory with
+no picker, background scanning from the tray, and a real trust boundary - the
+renderer asks, and a separate process decides.
 
 `apps/web` is that shell, built on the same core:
 
@@ -50,6 +51,11 @@ grant. Turning it on is a deliberate edit to that file.
   the three dark lamps in the `web` column are data, not a screenshot
 - rules outside the picked folder appear under *not evaluated here* with the
   reason the engine gave
+- a summary line says how many findings are `safe`, how many need a look, and
+  how many this build will actually remove - the counts come from the report,
+  never from a hand-written number
+- `safe` rows carry a delete button; pressing one either removes for real or
+  says why it will not
 - the last report per mount is kept in IndexedDB, so an offline launch still
   shows something
 - service worker and manifest via `vite-plugin-pwa`; it installs
@@ -137,14 +143,36 @@ where Electron actually earns its keep:
   and not belong to a `dangerous` rule - then a native dialog asks the human.
   `partitionRemovable` is unit tested against tampered reports.
 
-The three safety levels only mean anything in this shell: `safe` is what the
-bulk button collects, `review` has to be removed one at a time, and `dangerous`
-is report-only and refused by main. In the web shell the distinction is moot -
-that port cannot delete at all.
+The three safety levels are the same in both shells: `safe` is offered for
+removal, `review` is listed but never removed for you, and `dangerous` is
+report-only and refused by main.
 
 Both shells render the same `packages/ui`. The only thing that differs is the
 data: the capability matrix, the presence of a delete button, whether a folder
 had to be picked.
+
+## What v0.0.1 will actually delete
+
+One folder, on purpose.
+
+The delete path is real and completely wired in both shells - permission grant,
+native confirm, the removal itself, the rescan afterwards. But a demo of an
+architecture has no business emptying a stranger's Homebrew cache because a
+rule was slightly wrong, so `deletionVerdict` in core fences removal to the
+`sandbox` rule. Every other `safe` finding offers the button and then answers
+with a reason.
+
+```bash
+pnpm demo:sandbox   # ~/Library/Caches/ReclaimSandbox, with a test.txt in it
+```
+
+Scan `~/Library/Caches`, press remove on **Reclaim sandbox**, and it goes for
+real. Press it on anything else and the app tells you why it will not.
+
+Shipping for real means adding the other `safe` rules to one list in
+`packages/core/src/safety/deletion-policy.ts`. Nothing else in the codebase
+changes - and on the desktop side `partitionRemovable` enforces the same policy
+in the main process, because the renderer is not trusted to enforce it.
 
 ## Running it
 

@@ -1,5 +1,5 @@
 import { FsaaFsPort } from '@mp/port-fsaa'
-import type { FsPort, LogicalPath } from '@mp/core'
+import type { LogicalPath } from '@mp/core'
 
 declare global {
   interface Window {
@@ -54,7 +54,7 @@ export function pickerSupported(): boolean {
 }
 
 export interface Picked {
-  port: FsPort
+  port: FsaaFsPort
   mount: Mount
   /** True when the folder name does not look like the mount that was asked for. */
   mismatch: boolean

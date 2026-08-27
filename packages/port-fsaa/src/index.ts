@@ -73,8 +73,32 @@ export class FsaaFsPort implements FsPort {
     }
   }
 
-  async remove(_path: LogicalPath): Promise<void> {
-    throw new PortUnsupported(this.id, 'remove')
+  /**
+   * Escalate to readwrite. Must be called from a user gesture - the browser
+   * ignores a permission request that no click asked for.
+   */
+  async requestWriteAccess(): Promise<boolean> {
+    const handle = this.root as FileSystemDirectoryHandle & {
+      queryPermission?: (options: { mode: string }) => Promise<PermissionState>
+      requestPermission?: (options: { mode: string }) => Promise<PermissionState>
+    }
+    if (!handle.queryPermission || !handle.requestPermission) return false
+    if ((await handle.queryPermission({ mode: 'readwrite' })) === 'granted') return true
+    return (await handle.requestPermission({ mode: 'readwrite' })) === 'granted'
+  }
+
+  async remove(path: LogicalPath): Promise<void> {
+    if (!paths.isUnder(path, this.mount) || path === this.mount) {
+      throw new PortUnsupported(this.id, `remove outside the picked folder (${path})`)
+    }
+    const relative = paths.relative(this.mount, path)
+    const segments = relative.split('/')
+    const name = segments.pop()!
+
+    let parent: FileSystemDirectoryHandle = this.root
+    for (const segment of segments) parent = await parent.getDirectoryHandle(segment)
+
+    await parent.removeEntry(name, { recursive: true })
   }
 
   private async resolve(path: LogicalPath): Promise<FileSystemHandle | null> {

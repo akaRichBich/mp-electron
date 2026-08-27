@@ -9,7 +9,7 @@ import { checkPath } from '../safety/allowlist'
 export const SafetyLevel = z.enum(['safe', 'review', 'dangerous'])
 export type SafetyLevel = z.infer<typeof SafetyLevel>
 
-export const Category = z.enum(['cache', 'logs', 'build-artifacts', 'package-manager'])
+export const Category = z.enum(['cache', 'logs', 'build-artifacts', 'package-manager', 'demo'])
 export type Category = z.infer<typeof Category>
 
 const pathField = z.string().superRefine((value, ctx) => {

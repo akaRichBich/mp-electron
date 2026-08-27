@@ -38,8 +38,16 @@ RECLAIM_HOME="$PWD/.demo-home" pnpm dev:desktop
 ```
 
 Paths arriving from the renderer are re-checked in main (`partitionRemovable`):
-a path must appear in the report main itself produced *and* still pass the
-allowlist. Never relax that to make a UI change easier.
+a path must appear in the report main itself produced, still pass the
+allowlist, and be something `deletionVerdict` permits. Never relax that to make
+a UI change easier.
+
+## What may be deleted
+
+`packages/core/src/safety/deletion-policy.ts` is the single answer, read by
+both shells. In v0.0.1 only the `sandbox` rule is removable - the delete path
+is fully wired, but fenced, so a demo cannot take something real. Widening it
+is a deliberate edit to `DELETABLE_RULES`, never a special case in a shell.
 
 ## Adding a rule
 

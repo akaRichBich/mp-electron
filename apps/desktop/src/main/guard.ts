@@ -1,4 +1,4 @@
-import { checkPath, type Finding } from '@mp/core'
+import { checkPath, deletionVerdict, type Finding } from '@mp/core'
 
 export interface Partition {
   allowed: string[]
@@ -9,9 +9,10 @@ export interface Partition {
 /**
  * The renderer is not trusted with paths. A path may only be removed if it
  * appears in the report main itself produced, still passes the allowlist, and
- * belongs to a rule that is not `dangerous` - so neither a compromised renderer
- * nor a stale report can widen the blast radius. Everything else is refused and
- * reported back.
+ * is something this build is willing to delete at all (`deletionVerdict`, which
+ * covers the `dangerous` level and the v0.0.1 sandbox fence) - so neither a
+ * compromised renderer nor a stale report can widen the blast radius.
+ * Everything else is refused and reported back.
  */
 export function partitionRemovable(paths: readonly string[], findings: readonly Finding[]): Partition {
   const known = new Map(findings.map((finding) => [finding.path, finding]))
@@ -20,7 +21,7 @@ export function partitionRemovable(paths: readonly string[], findings: readonly 
 
   for (const path of paths) {
     const finding = known.get(path)
-    if (finding && finding.safety !== 'dangerous' && checkPath(path).ok) allowed.push(path)
+    if (finding && deletionVerdict(finding).allowed && checkPath(path).ok) allowed.push(path)
     else refused.push(path)
   }
 

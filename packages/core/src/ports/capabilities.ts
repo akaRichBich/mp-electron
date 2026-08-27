@@ -9,7 +9,10 @@ import type { PortCapabilities } from './fs-port'
  */
 export const SHELL_CAPABILITIES = {
   web: {
-    canDelete: false,
+    // The File System Access API can remove entries once the user grants
+    // readwrite. What v0.0.1 is *willing* to remove is a separate question -
+    // see `deletionVerdict`.
+    canDelete: true,
     canScanWithoutPicker: false,
     canRunInBackground: false,
   },

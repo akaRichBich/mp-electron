@@ -26,6 +26,9 @@ const files: Record<string, { size: number; ageDays?: number }> = {
   'Library/Logs/DiagnosticReports/crash-1.ips': { size: 240_000, ageDays: 60 },
   // Written today: the age filter should leave this one alone.
   'Library/Logs/Homebrew/brew.log': { size: 180_000 },
+  // The only thing v0.0.1 will actually delete.
+  'Library/Caches/ReclaimSandbox/test.txt': { size: 0 },
+  'Library/Caches/ReclaimSandbox/sample.bin': { size: 2_000_000 },
   // Deliberately outside the allowlist: nothing should ever touch this.
   'Documents/thesis.pdf': { size: 3_000_000 },
 }

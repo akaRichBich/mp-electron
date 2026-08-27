@@ -16,6 +16,7 @@ export function Findings({
     <div className="findings">
       {findings.map((finding, index) => {
         const scale = scaleFor(finding.bytes)
+        const action = renderAction?.(finding)
         return (
           <article
             className="finding"
@@ -40,7 +41,7 @@ export function Findings({
             <div className="finding-size">
               {applyScale(finding.bytes, scale)}
               <span>{scale.unit}</span>
-              {renderAction && <div className="finding-action">{renderAction(finding)}</div>}
+              {action && <div className="finding-action">{action}</div>}
             </div>
 
             <p className="explain">

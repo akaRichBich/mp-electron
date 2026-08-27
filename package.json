@@ -15,7 +15,8 @@
     "demo:home": "tsx scripts/make-demo-home.ts",
     "dev:desktop": "pnpm --filter @mp/desktop dev",
     "dev:web": "pnpm --filter @mp/web dev",
-    "dry-run": "tsx scripts/dry-run.ts"
+    "dry-run": "tsx scripts/dry-run.ts",
+    "demo:sandbox": "tsx scripts/make-sandbox.ts"
   },
   "devDependencies": {
     "@mp/core": "workspace:^",
