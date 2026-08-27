@@ -5,11 +5,14 @@ export function Notice({
   title,
   detail,
   onDismiss,
+  actions,
   tone = 'warn',
 }: {
   title: string
   detail: ReactNode
   onDismiss?: () => void
+  /** Buttons for a decision this notice is asking the reader to make. */
+  actions?: ReactNode
   tone?: 'warn' | 'error' | 'plain'
 }) {
   const ref = useRef<HTMLDivElement>(null)
@@ -24,11 +27,14 @@ export function Notice({
     <div className="panel" data-tone={tone} ref={ref}>
       <h3>{title}</h3>
       <p>{detail}</p>
-      {onDismiss && (
-        <p>
-          <button className="button" data-variant="quiet" onClick={onDismiss}>
-            dismiss
-          </button>
+      {(actions || onDismiss) && (
+        <p className="notice-actions">
+          {actions}
+          {onDismiss && (
+            <button className="button" data-variant="quiet" onClick={onDismiss}>
+              {actions ? 'cancel' : 'dismiss'}
+            </button>
+          )}
         </p>
       )}
     </div>

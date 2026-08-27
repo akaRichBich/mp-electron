@@ -820,3 +820,18 @@ body::after {
 .panel[data-tone='plain'] {
   border-color: var(--line-hot);
 }
+
+.notice-actions {
+  display: flex;
+  gap: 0.6rem;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.demo-entry {
+  display: flex;
+  align-items: center;
+  gap: 0.9rem;
+  flex-wrap: wrap;
+  margin: 1.4rem 0 0;
+}

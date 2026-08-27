@@ -9,7 +9,9 @@ import {
   type ScanReport,
 } from '@mp/core'
 import { Findings, Notice, Rail, Readout, SafetySummary, Skipped } from '@mp/ui'
-import { MOUNTS, pickMount, pickerSupported, type Mount, type Picked } from './platform'
+import { MOUNTS, pickMount, pickerSupported, type Mount } from './platform'
+import { DEMO_MOUNT, demoSupported, openDemoSandbox } from './demo-fs'
+import type { FsaaFsPort } from '@mp/port-fsaa'
 import { loadReports, saveReport } from './history'
 
 type Phase =
@@ -26,6 +28,14 @@ type Phase =
 
 const supported = pickerSupported()
 
+const DEMO_MOUNT_ENTRY: Mount = {
+  id: 'demo',
+  label: 'Built-in sandbox',
+  path: DEMO_MOUNT,
+  expect: 'Caches',
+  hint: 'a tree in browser storage - none of your folders',
+}
+
 interface NoticeState {
   title: string
   detail: string
@@ -36,8 +46,10 @@ export function App() {
   const [phase, setPhase] = useState<Phase>({ kind: 'idle' })
   const [installer, setInstaller] = useState<Event | null>(null)
   const [notice, setNotice] = useState<NoticeState | null>(null)
+  const [pending, setPending] = useState<Finding | null>(null)
+  const [busy, setBusy] = useState(false)
   // Kept so a removal can reuse the folder the user already granted.
-  const picked = useRef<Picked | null>(null)
+  const port = useRef<FsaaFsPort | null>(null)
 
   // An offline launch still has something to show: the last report per mount.
   useEffect(() => {
@@ -63,23 +75,47 @@ export function App() {
     return () => window.removeEventListener('beforeinstallprompt', onPrompt)
   }, [])
 
-  async function run(mount: Mount) {
-    const chosen = await pickMount(mount)
-    if (!chosen) return
-    picked.current = chosen
-    setNotice(null)
-
+  async function scanWith(
+    subject: FsaaFsPort,
+    mount: Mount,
+    options: { mismatch?: boolean; persist?: boolean } = {},
+  ) {
     setPhase({ kind: 'scanning', mount, done: 0, total: allRules().length, ruleId: '' })
 
-    const report = await scan(chosen.port, allRules(), {
+    const report = await scan(subject, allRules(), {
       onProgress: ({ done, total, ruleId }) =>
         setPhase((current) =>
           current.kind === 'scanning' ? { ...current, done, total, ruleId } : current,
         ),
     })
 
-    void saveReport(mount.id, report)
-    setPhase({ kind: 'report', mount, report, at: Date.now(), mismatch: chosen.mismatch, cached: false })
+    if (options.persist !== false) void saveReport(mount.id, report)
+    setPhase({
+      kind: 'report',
+      mount,
+      report,
+      at: Date.now(),
+      mismatch: options.mismatch ?? false,
+      cached: false,
+    })
+  }
+
+  async function run(mount: Mount) {
+    const chosen = await pickMount(mount)
+    if (!chosen) return
+    port.current = chosen.port
+    setNotice(null)
+    setPending(null)
+    await scanWith(chosen.port, mount, { mismatch: chosen.mismatch })
+  }
+
+  /** No picker, no permission, no folders of yours: a tree in OPFS. */
+  async function runDemo() {
+    setNotice(null)
+    setPending(null)
+    const subject = await openDemoSandbox({ reset: true })
+    port.current = subject
+    await scanWith(subject, DEMO_MOUNT_ENTRY, { persist: false })
   }
 
   /**
@@ -87,7 +123,7 @@ export function App() {
    * confirm, `removeEntry`, rescan. There is no second process to re-check it
    * in - the web shell *is* the renderer - so the policy is the fence.
    */
-  async function attemptDelete(finding: Finding) {
+  function attemptDelete(finding: Finding) {
     const verdict = deletionVerdict(finding)
     if (!verdict.allowed) {
       setNotice({ title: verdict.title, detail: verdict.detail, tone: 'plain' })
@@ -96,8 +132,7 @@ export function App() {
 
     if (phase.kind !== 'report') return
 
-    const current = picked.current
-    if (!current) {
+    if (!port.current) {
       // A report restored from IndexedDB has no folder handle behind it: the
       // browser does not hand those back across a reload.
       setNotice({
@@ -109,28 +144,37 @@ export function App() {
       return
     }
 
-    if (!(await current.port.requestWriteAccess())) {
+    setNotice(null)
+    setPending(finding)
+  }
+
+  async function confirmDelete(finding: Finding) {
+    const subject = port.current
+    if (!subject || phase.kind !== 'report') return
+    setBusy(true)
+    try {
+      if (!(await subject.requestWriteAccess())) {
+        setPending(null)
+        setNotice({
+          title: 'Write access was not granted',
+          detail:
+            'The folder was opened for reading. Removing needs readwrite on the same folder, which only you can grant.',
+          tone: 'warn',
+        })
+        return
+      }
+
+      await subject.remove(finding.path)
+      setPending(null)
       setNotice({
-        title: 'Write access was not granted',
-        detail:
-          'The folder was opened for reading. Removing needs readwrite on the same folder, which only you can grant.',
-        tone: 'warn',
+        title: `Removed ${finding.title}`,
+        detail: `${formatBytes(finding.bytes)} freed from ${finding.path}.`,
+        tone: 'plain',
       })
-      return
+      await scanWith(subject, phase.mount, { persist: phase.mount.id !== 'demo' })
+    } finally {
+      setBusy(false)
     }
-
-    const confirmed = window.confirm(
-      `Remove ${finding.path}?\n\n${formatBytes(finding.bytes)} across ${finding.entries} file(s). This cannot be undone.`,
-    )
-    if (!confirmed) return
-
-    await current.port.remove(finding.path)
-    setNotice({
-      title: `Removed ${finding.title}`,
-      detail: `${formatBytes(finding.bytes)} freed from ${finding.path}. Rescanning.`,
-      tone: 'plain',
-    })
-    await run(phase.mount)
   }
 
   return (
@@ -180,16 +224,18 @@ export function App() {
 
         <hr className="rule" />
 
-        {!supported ? (
-          <div className="panel" data-tone="warn">
-            <h3>This browser has no File System Access API</h3>
+        {!supported && (
+          <div className="panel" data-tone="warn" style={{ marginBottom: '1.5rem' }}>
+            <h3>This browser cannot open your folders</h3>
             <p>
               Reading a chosen folder needs <code>showDirectoryPicker()</code>, which today means a
-              Chromium browser on the desktop. Firefox and Safari have not shipped it. The engine
-              itself runs anywhere - it is the port underneath that cannot.
+              Chromium browser on the desktop. The engine itself runs anywhere - it is the port
+              underneath that cannot. The built-in sandbox below works here regardless.
             </p>
           </div>
-        ) : (
+        )}
+
+        {supported && (
           <>
             <div className="mounts">
               {MOUNTS.map((mount) => (
@@ -206,6 +252,22 @@ export function App() {
               ))}
             </div>
 
+          </>
+        )}
+
+        {demoSupported() && (
+          <p className="demo-entry">
+            <button className="button" data-variant="quiet" onClick={() => void runDemo()}>
+              or try a built-in sandbox
+            </button>
+            <span className="ghost">
+              a tree in this browser's own storage - no folder access, and the sandbox row really
+              deletes
+            </span>
+          </p>
+        )}
+
+        <>
             {phase.kind === 'scanning' && (
               <section style={{ marginTop: '2.5rem' }}>
                 <div className="sweep" />
@@ -252,6 +314,26 @@ export function App() {
                     />
                     <SafetySummary findings={phase.report.findings} />
 
+                    {pending && (
+                      <div style={{ margin: '1.5rem 0' }}>
+                        <Notice
+                          tone="warn"
+                          title={`Remove ${pending.title}?`}
+                          detail={`${formatBytes(pending.bytes)} across ${pending.entries} file(s) at ${pending.path}. This deletes from disk and cannot be undone.`}
+                          onDismiss={() => setPending(null)}
+                          actions={
+                            <button
+                              className="button"
+                              disabled={busy}
+                              onClick={() => void confirmDelete(pending)}
+                            >
+                              remove for real
+                            </button>
+                          }
+                        />
+                      </div>
+                    )}
+
                     {notice && (
                       <div style={{ margin: '1.5rem 0' }}>
                         <Notice
@@ -270,7 +352,8 @@ export function App() {
                           <button
                             className="button"
                             data-variant="quiet"
-                            onClick={() => void attemptDelete(finding)}
+                            disabled={busy}
+                            onClick={() => attemptDelete(finding)}
                           >
                             delete
                           </button>
@@ -289,8 +372,7 @@ export function App() {
                 </p>
               </section>
             )}
-          </>
-        )}
+        </>
       </main>
     </div>
   )

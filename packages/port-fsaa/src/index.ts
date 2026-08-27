@@ -82,7 +82,8 @@ export class FsaaFsPort implements FsPort {
       queryPermission?: (options: { mode: string }) => Promise<PermissionState>
       requestPermission?: (options: { mode: string }) => Promise<PermissionState>
     }
-    if (!handle.queryPermission || !handle.requestPermission) return false
+    // OPFS handles carry no permission API because they need none.
+    if (!handle.queryPermission || !handle.requestPermission) return true
     if ((await handle.queryPermission({ mode: 'readwrite' })) === 'granted') return true
     return (await handle.requestPermission({ mode: 'readwrite' })) === 'granted'
   }

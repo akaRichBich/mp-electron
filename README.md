@@ -66,7 +66,8 @@ hand-rolled `FileSystemDirectoryHandle`, since the real API needs an OS picker
 dialog that no test runner can open.
 
 `showDirectoryPicker()` is Chromium-only today, and the app says so plainly
-instead of failing - Firefox and Safari get an explanation, not a blank page.
+instead of failing - Firefox and Safari get an explanation and the OPFS
+sandbox, not a blank page.
 
 ## The harness: rules that cannot be written wrong
 
@@ -168,6 +169,12 @@ pnpm demo:sandbox   # ~/Library/Caches/ReclaimSandbox, with a test.txt in it
 
 Scan `~/Library/Caches`, press remove on **Reclaim sandbox**, and it goes for
 real. Press it on anything else and the app tells you why it will not.
+
+The web app also offers **a built-in sandbox** that needs no folder access at
+all: a tree in the Origin Private File System, which every modern browser has.
+The same `FsaaFsPort`, engine and rules run over it, so the whole path -
+including a real deletion - can be watched in Firefox and Safari, where
+`showDirectoryPicker()` does not exist.
 
 Shipping for real means adding the other `safe` rules to one list in
 `packages/core/src/safety/deletion-policy.ts`. Nothing else in the codebase
