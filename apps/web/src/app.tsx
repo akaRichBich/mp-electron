@@ -30,10 +30,11 @@ const supported = pickerSupported()
 
 const DEMO_MOUNT_ENTRY: Mount = {
   id: 'demo',
-  label: 'Built-in sandbox',
+  label: 'Simulated disk',
   path: DEMO_MOUNT,
   expect: 'Caches',
   hint: 'a tree in browser storage - none of your folders',
+  simulated: true,
 }
 
 interface NoticeState {
@@ -101,12 +102,22 @@ export function App() {
   }
 
   async function run(mount: Mount) {
-    const chosen = await pickMount(mount)
-    if (!chosen) return
-    port.current = chosen.port
+    const outcome = await pickMount(mount)
+    if (outcome.kind === 'cancelled') return
+    if (outcome.kind === 'failed') {
+      setNotice({
+        title: `The browser would not open ${mount.path}`,
+        detail: mount.blockedByBrowser
+          ? `Chromium blocks ~/Library and everything under it for this API, whatever you pick in the dialog, so this folder is out of reach from a tab. It is exactly what the desktop app is for. The browser said: ${outcome.message}`
+          : outcome.message,
+        tone: 'error',
+      })
+      return
+    }
+    port.current = outcome.picked.port
     setNotice(null)
     setPending(null)
-    await scanWith(chosen.port, mount, { mismatch: chosen.mismatch })
+    await scanWith(outcome.picked.port, mount, { mismatch: outcome.picked.mismatch })
   }
 
   /** No picker, no permission, no folders of yours: a tree in OPFS. */
@@ -164,11 +175,36 @@ export function App() {
         return
       }
 
-      await subject.remove(finding.path)
+      try {
+        await subject.remove(finding.path)
+      } catch (error) {
+        setPending(null)
+        setNotice({
+          title: 'It could not be removed',
+          detail: `The browser refused: ${error instanceof Error ? error.message : String(error)}`,
+          tone: 'error',
+        })
+        return
+      }
+
+      // Trust the report, not the call: `removeEntry` resolving is not the
+      // same as the folder being gone.
+      if (await subject.stat(finding.path)) {
+        setPending(null)
+        setNotice({
+          title: 'It is still there',
+          detail: `The removal reported success but ${finding.path} still exists. Nothing was lost - but do not trust this build to have cleaned it.`,
+          tone: 'error',
+        })
+        return
+      }
+
       setPending(null)
       setNotice({
         title: `Removed ${finding.title}`,
-        detail: `${formatBytes(finding.bytes)} freed from ${finding.path}.`,
+        detail: phase.mount.simulated
+          ? `${formatBytes(finding.bytes)} freed from the simulated tree at ${finding.path}. Your disk is unchanged.`
+          : `${formatBytes(finding.bytes)} freed from ${finding.path}.`,
         tone: 'plain',
       })
       await scanWith(subject, phase.mount, { persist: phase.mount.id !== 'demo' })
@@ -248,6 +284,9 @@ export function App() {
                   <b>{mount.label}</b>
                   <code>{mount.path}</code>
                   <small>{mount.hint}</small>
+                  {mount.blockedByBrowser && (
+                    <small className="blocked">browsers refuse this folder &mdash; desktop only</small>
+                  )}
                 </button>
               ))}
             </div>
@@ -255,14 +294,25 @@ export function App() {
           </>
         )}
 
+        {notice && phase.kind !== 'report' && (
+          <div style={{ marginTop: '1.5rem' }}>
+            <Notice
+              title={notice.title}
+              detail={notice.detail}
+              tone={notice.tone}
+              onDismiss={() => setNotice(null)}
+            />
+          </div>
+        )}
+
         {demoSupported() && (
           <p className="demo-entry">
             <button className="button" data-variant="quiet" onClick={() => void runDemo()}>
-              or try a built-in sandbox
+              or try it on a simulated disk
             </button>
             <span className="ghost">
-              a tree in this browser's own storage - no folder access, and the sandbox row really
-              deletes
+              a tree in this browser's own storage - no folder access, nothing of yours read or
+              removed
             </span>
           </p>
         )}
@@ -297,6 +347,19 @@ export function App() {
                   </div>
                 )}
 
+                {phase.mount.simulated && (
+                  <div className="panel" data-tone="warn" style={{ marginBottom: '2rem' }}>
+                    <h3>Simulated disk - your files are not involved</h3>
+                    <p>
+                      This tree lives in this browser's own storage. The paths below are written to
+                      look real so that the real rules match them, but nothing here is read from or
+                      written to your disk. Removing <code>~/Library/Caches/ReclaimSandbox</code>{' '}
+                      here does not touch the folder of that name on your Mac - for that, pick{' '}
+                      <b>Caches</b> above.
+                    </p>
+                  </div>
+                )}
+
                 {phase.report.findings.length === 0 ? (
                   <div className="panel">
                     <h3>Nothing to reclaim here</h3>
@@ -310,7 +373,11 @@ export function App() {
                     <Readout
                       bytes={phase.report.totalBytes}
                       locations={phase.report.findings.length}
-                      scanned={phase.mount.path}
+                      scanned={
+                        phase.mount.simulated
+                          ? `${phase.mount.path} (simulated)`
+                          : phase.mount.path
+                      }
                     />
                     <SafetySummary findings={phase.report.findings} />
 
@@ -319,7 +386,11 @@ export function App() {
                         <Notice
                           tone="warn"
                           title={`Remove ${pending.title}?`}
-                          detail={`${formatBytes(pending.bytes)} across ${pending.entries} file(s) at ${pending.path}. This deletes from disk and cannot be undone.`}
+                          detail={
+                            phase.mount.simulated
+                              ? `${formatBytes(pending.bytes)} across ${pending.entries} file(s) at ${pending.path}, in the simulated tree. Nothing on your disk changes.`
+                              : `${formatBytes(pending.bytes)} across ${pending.entries} file(s) at ${pending.path}. This deletes from disk and cannot be undone.`
+                          }
                           onDismiss={() => setPending(null)}
                           actions={
                             <button

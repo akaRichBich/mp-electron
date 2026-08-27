@@ -29,6 +29,8 @@
       "ageDays": 2
     },
     "~/Library/Caches/ReclaimSandbox/test.txt": 42,
-    "~/Library/Caches/ReclaimSandbox/sample.bin": 2000000
+    "~/Library/Caches/ReclaimSandbox/sample.bin": 2000000,
+    "~/.npm/_cacache/index-v5/00/ab/3f2c1d": 1200000,
+    "~/.npm/_cacache/content-v2/sha512/aa/bb/deadbeef": 47000000
   }
 }

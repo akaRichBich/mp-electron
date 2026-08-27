@@ -164,7 +164,9 @@ ipcMain.handle(CHANNELS.reveal, (_event, path: string) => {
  * allowlist. Then a native dialog asks the human.
  */
 ipcMain.handle(CHANNELS.remove, async (_event, paths: string[]): Promise<RemoveResult> => {
-  const { allowed, refused, bytes } = partitionRemovable(paths, lastReport?.findings ?? [])
+  const findings = lastReport?.findings ?? []
+  const bytesByPath = new Map(findings.map((finding) => [finding.path, finding.bytes]))
+  const { allowed, refused, bytes } = partitionRemovable(paths, findings)
 
   if (allowed.length === 0) return { removed: 0, bytes: 0, refused, report: lastReport }
 
@@ -182,9 +184,23 @@ ipcMain.handle(CHANNELS.remove, async (_event, paths: string[]): Promise<RemoveR
 
   if (response !== 0) return { removed: 0, bytes: 0, refused: [], report: lastReport }
 
-  for (const path of allowed) await port.remove(path)
+  // A path that throws, or that survives its own removal, is reported back
+  // rather than counted as removed.
+  const removed: string[] = []
+  for (const path of allowed) {
+    try {
+      await port.remove(path)
+      if (await port.stat(path)) throw new Error('still present after removal')
+      removed.push(path)
+    } catch (error) {
+      console.error('[reclaim] could not remove', path, error)
+      refused.push(path)
+    }
+  }
+
   const report = await runScan({ notify: false })
-  return { removed: allowed.length, bytes, refused, report }
+  const removedBytes = removed.reduce((sum, path) => sum + (bytesByPath.get(path) ?? 0), 0)
+  return { removed: removed.length, bytes: removedBytes, refused, report }
 })
 
 void app.whenReady().then(() => {

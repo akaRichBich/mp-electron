@@ -835,3 +835,10 @@ body::after {
   flex-wrap: wrap;
   margin: 1.4rem 0 0;
 }
+
+.mount .blocked {
+  color: var(--danger);
+  font-family: var(--mono);
+  font-size: 0.68rem;
+  letter-spacing: 0.02em;
+}

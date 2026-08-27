@@ -41,6 +41,18 @@ It can delete, too. The picker asks for read only, and readwrite is requested
 from the click that needs it - a scan never costs more permission than a scan
 needs.
 
+And then macOS bites. Chromium blocks `~/Library` and everything under it for
+the File System Access API (`kBlockAllChildren`, in
+`chrome_file_system_access_permission_context.cc`), so `~/Library/Caches`,
+`~/Library/Logs` and Xcode's DerivedData - the three places a Mac actually
+hoards - cannot be handed to a tab at all, however the user answers the dialog.
+The app says so on those cards rather than letting the picker fail mysteriously,
+and offers `~/.npm/_cacache`, which is outside `~/Library` and works: 379 MB on
+the machine this was written on.
+
+That is the sharpest version of why the desktop shell exists. Not "the browser
+is slower" - the browser is not allowed.
+
 What the desktop build has that a browser cannot: the whole home directory with
 no picker, background scanning from the tray, and a real trust boundary - the
 renderer asks, and a separate process decides.
