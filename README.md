@@ -47,6 +47,11 @@ grant. Turning it on is a deliberate edit to that file.
   shows something
 - service worker and manifest via `vite-plugin-pwa`; it installs
 
+All three ports are held to the same contract test: each one scans the same
+fixture and must report the same findings. The web port's test drives a
+hand-rolled `FileSystemDirectoryHandle`, since the real API needs an OS picker
+dialog that no test runner can open.
+
 `showDirectoryPicker()` is Chromium-only today, and the app says so plainly
 instead of failing - Firefox and Safari get an explanation, not a blank page.
 
