@@ -1,0 +1,10 @@
+{
+  "what": "Old projects",
+  "paths": ["~/Documents/Projects"],
+  "match": "whole-folder",
+  "category": "build-artifacts",
+  "safety": "safe",
+  "explain": "Project folders that have not been opened for a long time and take up space.",
+  "fixture": { "files": { "~/Documents/Projects/old/a.bin": 1000 } },
+  "requestedBy": "pm@example.com"
+}

@@ -1,0 +1,20 @@
+{
+  "name": "mp-electron",
+  "private": true,
+  "type": "module",
+  "packageManager": "pnpm@9.15.0",
+  "scripts": {
+    "typecheck": "tsc -p packages/core/tsconfig.json && tsc -p packages/port-node/tsconfig.json && tsc -p packages/port-fsaa/tsconfig.json && tsc -p packages/harness/tsconfig.json",
+    "check:arch": "tsx scripts/check-architecture.ts",
+    "test": "vitest run",
+    "eval": "tsx packages/harness/src/eval/run.ts",
+    "rule:new": "tsx packages/harness/src/cli/rule-new.ts",
+    "gates": "pnpm typecheck && pnpm check:arch && pnpm test && pnpm eval"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.2",
+    "tsx": "^4.19.2",
+    "typescript": "^5.7.2",
+    "vitest": "^2.1.8"
+  }
+}

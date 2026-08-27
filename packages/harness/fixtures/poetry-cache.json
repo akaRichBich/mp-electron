@@ -1,0 +1,7 @@
+{
+  "name": "poetry-cache",
+  "files": {
+    "~/Library/Caches/pypoetry/artifacts/ab/cd/requests-2.32.whl": 240000,
+    "~/Library/Caches/pypoetry/cache/repositories/pypi/req.json": 88000
+  }
+}

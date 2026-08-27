@@ -1,0 +1,8 @@
+{
+  "ruleId": "xcode-derived-data",
+  "fixture": "packages/core/fixtures/mac-dev-home.json",
+  "expect": {
+    "minFindings": 1,
+    "neverTouches": ["~/Documents", "~/Desktop"]
+  }
+}

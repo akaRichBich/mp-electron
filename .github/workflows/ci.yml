@@ -1,0 +1,35 @@
+name: ci
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  gates:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+
+      # Ordered cheapest-first so a generated rule fails fast and legibly.
+      - name: types
+        run: pnpm typecheck
+      - name: core stays platform-free
+        run: pnpm check:arch
+      - name: unit tests
+        run: pnpm test
+      - name: rule evals
+        run: pnpm eval
+
+      - name: no new dependencies
+        run: |
+          git fetch origin "${{ github.base_ref || 'main' }}" --depth=1 || exit 0
+          if git diff --name-only FETCH_HEAD...HEAD | grep -qE '(^|/)package\.json$|pnpm-lock\.yaml'; then
+            echo "This branch changes dependencies. A rule never needs one - a human reviews this."
+            exit 1
+          fi

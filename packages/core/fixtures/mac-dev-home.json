@@ -1,0 +1,16 @@
+{
+  "name": "mac-dev-home",
+  "files": {
+    "~/Library/Caches/Homebrew/downloads/node--22.tar.gz": 48000000,
+    "~/Library/Caches/Homebrew/downloads/ffmpeg--7.1.tar.gz": 92000000,
+    "~/Library/Caches/Homebrew/api/formula.jws.json": 4200000,
+    "~/Library/Caches/pip/wheels/6f/ab/numpy-2.1.3.whl": 18000000,
+    "~/Library/Caches/pip/http-v2/0/1/body": 7300000,
+    "~/Library/Caches/pip/selfcheck.json": 1200,
+    "~/Library/Developer/Xcode/DerivedData/App-abc/Build/Products/bin": { "size": 310000000, "ageDays": 40 },
+    "~/Library/Developer/Xcode/DerivedData/App-abc/Index/db.sqlite": { "size": 82000000, "ageDays": 40 },
+    "~/Library/Developer/Xcode/DerivedData/Fresh-xyz/Build/out.o": { "size": 5000000, "ageDays": 1 },
+    "~/Library/Logs/DiagnosticReports/crash-1.ips": 240000,
+    "~/Documents/thesis.pdf": 3000000
+  }
+}

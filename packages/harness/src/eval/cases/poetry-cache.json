@@ -1,0 +1,11 @@
+{
+  "ruleId": "poetry-cache",
+  "fixture": "packages/harness/fixtures/poetry-cache.json",
+  "expect": {
+    "minFindings": 1,
+    "neverTouches": [
+      "~/Documents",
+      "~/Desktop"
+    ]
+  }
+}
