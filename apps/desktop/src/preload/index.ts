@@ -12,6 +12,8 @@ const api: DesktopApi = {
   boot: ipcRenderer.sendSync(CHANNELS.boot) as Boot,
   scan: () => ipcRenderer.invoke(CHANNELS.scan) as Promise<ScanReport>,
   last: () => ipcRenderer.invoke(CHANNELS.last) as Promise<ScanReport | null>,
+  cancel: () => ipcRenderer.invoke(CHANNELS.cancel) as Promise<void>,
+  onCancelled: (handler) => subscribe<void>(CHANNELS.cancelled, handler),
   remove: (paths) => ipcRenderer.invoke(CHANNELS.remove, paths) as Promise<RemoveResult>,
   reveal: (path) => ipcRenderer.invoke(CHANNELS.reveal, path) as Promise<void>,
   onProgress: (handler) => subscribe<ScanProgress>(CHANNELS.progress, handler),

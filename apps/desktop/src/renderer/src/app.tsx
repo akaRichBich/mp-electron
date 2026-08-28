@@ -36,11 +36,13 @@ export function App() {
       setReport(incoming)
       setProgress(null)
     })
+    const offCancelled = api.onCancelled(() => setProgress(null))
     // The startup scan may well have finished before this mounted.
     void api.last().then((existing) => existing && setReport((current) => current ?? existing))
     return () => {
       offProgress()
       offReport()
+      offCancelled()
     }
   }, [])
 
@@ -151,13 +153,19 @@ export function App() {
         <hr className="rule" />
 
         <div className="actions">
-          <button
-            className="button"
-            onClick={() => void rescan()}
-            disabled={scanning || busy || !api.boot.homeExists}
-          >
-            {scanning ? 'scanning…' : report ? 'scan again' : 'scan now'}
-          </button>
+          {scanning ? (
+            <button className="button" data-variant="danger" onClick={() => void api.cancel()}>
+              stop scanning
+            </button>
+          ) : (
+            <button
+              className="button"
+              onClick={() => void rescan()}
+              disabled={busy || !api.boot.homeExists}
+            >
+              {report ? 'scan again' : 'scan now'}
+            </button>
+          )}
           <span className="ghost">
             {scanning && progress
               ? `rule ${progress.done + 1}/${progress.total}${progress.ruleId ? ` · ${progress.ruleId}` : ''}`

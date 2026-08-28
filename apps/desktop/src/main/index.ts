@@ -13,9 +13,11 @@ import {
   nativeImage,
   shell,
 } from 'electron'
-import { SHELL_CAPABILITIES, allRules, checkPath, formatBytes, scan, type ScanReport } from '@mp/core'
+import { SHELL_CAPABILITIES, checkPath, formatBytes, type ScanReport } from '@mp/core'
 import { NodeFsPort } from '@mp/port-node'
 import { partitionRemovable } from './guard'
+import { captureIfAsked } from './screenshot'
+import { ScanCancelled, ScanService } from './scan-service'
 import { CHANNELS, type Boot, type RemoveResult } from '../shared/ipc'
 
 /**
@@ -42,22 +44,18 @@ if (demo && !homeExists) {
 let win: BrowserWindow | null = null
 let tray: Tray | null = null
 let lastReport: ScanReport | null = null
-let scanning = false
+const scans = new ScanService()
 
 function asset(name: string): string {
   return fileURLToPath(new URL(`../../build/${name}`, import.meta.url))
 }
 
 async function runScan(options: { notify: boolean }): Promise<ScanReport> {
-  if (!homeExists) {
-    return { portId: port.id, capabilities: port.capabilities, findings: [], skipped: [], totalBytes: 0 }
-  }
-  if (scanning && lastReport) return lastReport
-  scanning = true
+  if (!homeExists) return emptyReport()
   try {
-    const report = await scan(port, allRules(), {
-      onProgress: (progress) => win?.webContents.send(CHANNELS.progress, progress),
-    })
+    const report = await scans.run(home, (progress) =>
+      win?.webContents.send(CHANNELS.progress, progress),
+    )
     lastReport = report
     tray?.setToolTip(`Reclaim - ${formatBytes(report.totalBytes)} reclaimable`)
     win?.webContents.send(CHANNELS.report, report)
@@ -72,9 +70,17 @@ async function runScan(options: { notify: boolean }): Promise<ScanReport> {
         .show()
     }
     return report
-  } finally {
-    scanning = false
+  } catch (error) {
+    if (error instanceof ScanCancelled) {
+      win?.webContents.send(CHANNELS.cancelled)
+      return lastReport ?? emptyReport()
+    }
+    throw error
   }
+}
+
+function emptyReport(): ScanReport {
+  return { portId: port.id, capabilities: port.capabilities, findings: [], skipped: [], totalBytes: 0 }
 }
 
 function showWindow() {
@@ -115,6 +121,14 @@ function createWindow() {
     win = null
   })
 
+  captureIfAsked(win, () => app.exit(0))
+
+  const shotUrl = process.env['RECLAIM_SHOT_URL']
+  if (shotUrl) {
+    void win.loadURL(shotUrl)
+    return
+  }
+
   const devUrl = process.env['ELECTRON_RENDERER_URL']
   if (devUrl) void win.loadURL(devUrl)
   else void win.loadFile(fileURLToPath(new URL('../renderer/index.html', import.meta.url)))
@@ -137,7 +151,7 @@ function createTray() {
       { type: 'separator' },
       { label: demo ? `Demo home: ${home}` : home, enabled: false },
       { type: 'separator' },
-      { label: 'Quit', click: () => app.exit(0) },
+      { label: 'Quit', click: () => { scans.cancel(); app.exit(0) } },
     ]),
   )
 }
@@ -152,6 +166,8 @@ ipcMain.handle(CHANNELS.scan, () => runScan({ notify: false }))
 // A scan that finished before the window mounted still has a result. The UI
 // pulls it rather than relying on a push arriving after it subscribed.
 ipcMain.handle(CHANNELS.last, () => lastReport)
+
+ipcMain.handle(CHANNELS.cancel, () => scans.cancel())
 
 ipcMain.handle(CHANNELS.reveal, (_event, path: string) => {
   if (!checkPath(path).ok) return

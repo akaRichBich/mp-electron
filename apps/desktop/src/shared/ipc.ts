@@ -5,6 +5,8 @@ export const CHANNELS = {
   boot: 'reclaim:boot',
   scan: 'reclaim:scan',
   last: 'reclaim:last',
+  cancel: 'reclaim:cancel',
+  cancelled: 'reclaim:cancelled',
   remove: 'reclaim:remove',
   reveal: 'reclaim:reveal',
   progress: 'reclaim:progress',
@@ -42,6 +44,9 @@ export interface DesktopApi {
   scan(): Promise<ScanReport>
   /** The report from the startup scan, if it finished before the UI mounted. */
   last(): Promise<ScanReport | null>
+  /** Kills the scan's utility process. There is no cooperative flag to set. */
+  cancel(): Promise<void>
+  onCancelled(handler: () => void): () => void
   remove(paths: string[]): Promise<RemoveResult>
   reveal(path: string): Promise<void>
   onProgress(handler: (progress: ScanProgress) => void): () => void

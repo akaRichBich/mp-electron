@@ -16,7 +16,8 @@
     "dev:desktop": "pnpm --filter @mp/desktop dev",
     "dev:web": "pnpm --filter @mp/web dev",
     "dry-run": "tsx scripts/dry-run.ts",
-    "demo:sandbox": "tsx scripts/make-sandbox.ts"
+    "demo:sandbox": "tsx scripts/make-sandbox.ts",
+    "shots": "tsx scripts/make-shots.ts"
   },
   "devDependencies": {
     "@mp/core": "workspace:^",

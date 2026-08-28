@@ -1,241 +1,247 @@
-# mp-electron
+# Reclaim
 
-A macOS disk-cleanup demo built to make one point: **one domain core, three
-platform ports, two shells** - and the third port is what makes an agent's code
-safe to generate.
+**[Try it →](https://akarichbich.github.io/mp-electron/)** — no install, no
+folder access needed. Works in Firefox and Safari too.
 
-## One core, three platform ports
+A macOS disk-cleanup utility, built to answer a narrower question:
 
-`packages/core` holds the whole domain: the rule contract, the scan engine, the
-safety allowlist. It has no idea where it runs. Every filesystem call goes
-through one interface, `FsPort`:
+> How much of a codebase can you hand to an agent, if the boundaries are
+> enforced by a machine instead of by whoever reviews the pull request?
 
-| port | package | shell | delete | scan without picker | background |
+The disk cleaner is the substrate. The interesting part is the harness around
+it — and the architecture underneath, which is what makes the harness cheap
+enough to be strict.
+
+![The web shell after a scan](docs/screenshots/web.png)
+
+## The harness
+
+Four things, in descending order of how much work they save.
+
+### 1. One architectural rule, machine-enforced
+
+`CLAUDE.md` states exactly one rule: `packages/core` never touches the
+platform. Every filesystem call goes through `FsPort`. `pnpm check:arch` fails
+the build on a `node:` import, an `electron` import or a DOM global in core —
+and holds `packages/ui` to the same rule minus the DOM.
+
+This is not a convention an agent is asked to remember. It is a grep with an
+exit code, and it runs before the tests.
+
+### 2. One recipe for the one repeatable task
+
+`recipes/add-rule.md` describes adding a cleanup rule and nothing else. The
+prompt that starts it is *generated*, not written — `pnpm rule:new` renders it
+from a validated spec, so the same request always produces the same prompt, and
+a bad result is a bug in the recipe rather than in someone's phrasing.
+
+### 3. Fences, not warnings
+
+| fence | where it lives | what it stops |
+|---|---|---|
+| path allowlist | `RuleSchema`, at import time | a rule pointing at `~/Documents` cannot be *registered*, let alone shipped |
+| `dangerous` is report-only | `deletionVerdict`, checked in main | the renderer cannot ask for it, and is refused if it does |
+| deletion policy | `DELETABLE_RULES` | v0.0.1 only removes inside a sandbox folder |
+| file scope | the generated prompt | four files may change; the rest of the tree is not the agent's |
+| no new dependencies | CI, on `rule/*` branches | a rule never needs one |
+
+Each of these is a place where being wrong is *impossible* rather than
+*discouraged*.
+
+### 4. Gates that fail legibly
+
+`pnpm gates` — cheapest first, so a bad rule fails in seconds with a sentence:
+
+```
+typecheck     types across eight projects
+check:arch    core and ui stay platform-free
+test          36 tests, including a contract test all three ports must pass
+eval          every rule, against fixtures that ship with the repo
+build         both shells still build
+```
+
+Each rule carries four eval checks: it parses against the contract, it is
+actually registered, it finds something in its own fixture and nothing under
+`~/Documents`, and it did not reach for the filesystem.
+
+A real request going through — a QA spec for the Go build cache:
+
+```
+$ pnpm rule:new packages/harness/examples/go-build.spec.json
+wrote packages/harness/fixtures/go-build-cache.json
+wrote packages/harness/src/eval/cases/go-build-cache.json
+
+$ pnpm eval
+go-build-cache   FAIL schema_valid  FAIL registered_in  FAIL runs_against
+25/28 checks passed (89%) across 7 rules
+  - go-build-cache / schema_valid: rule "go-build-cache" is not in the registry
+
+# …agent follows recipes/add-rule.md…
+
+$ pnpm eval
+go-build-cache   PASS schema_valid  PASS registered_in  PASS runs_against
+28/28 checks passed (100%) across 7 rules
+```
+
+And a request that never gets that far:
+
+```
+$ pnpm rule:new packages/harness/examples/pnpm-store.spec.json
+This spec cannot be submitted:
+  - paths.0: "~/Library/pnpm/store" is outside every allowed prefix
+```
+
+The full path, written for the people who start it, is in
+[docs/adding-a-rule.md](docs/adding-a-rule.md).
+
+## What the gates actually caught
+
+The honest version, because "we have CI" means nothing on its own. Two columns:
+what machinery found, and what a human found — with the gate that exists now so
+it cannot happen twice.
+
+**Caught by a gate, before anyone looked**
+
+- The fake and node ports disagreed about directory age. A directory's own
+  mtime is set by the OS when an entry is added, and an in-memory fixture has
+  none — so the same tree produced different findings. The fix belonged in the
+  domain: age is measured from the newest file *inside*. Found by the
+  cross-port contract test, which exists for exactly this.
+- Reachability was decided per rule instead of per matcher, so a rule with two
+  locations had both evaluated as soon as either was in reach — reporting
+  findings outside the port's own mounts. Real ports hid it; the fake port did
+  not.
+
+**Caught by a human, then gated**
+
+- A `Logs` folder was offered in the picker with no rule looking at it: a
+  button that could only ever find nothing. Gate added — every mount the picker
+  offers must produce a finding against the reference fixture.
+- The remove button appeared for `dangerous` findings, contradicting the
+  contract. The fix went into `partitionRemovable` in the main process, not the
+  UI, because the renderer is not trusted to keep that promise. Test added
+  against tampered reports.
+- Several silent failures: a missing `RECLAIM_HOME` reporting a clean disk, a
+  removal that threw and said nothing, a blocked folder indistinguishable from
+  a cancelled dialog. Each now says what happened, and a removal re-checks the
+  path afterwards rather than trusting that the call resolved.
+
+The pattern is the point. Gates catch what is mechanically checkable and
+nothing else; everything a human catches becomes a new gate.
+
+## Why the substrate makes the harness cheap
+
+`packages/core` holds the whole domain and has no idea where it runs. Every
+filesystem call goes through one interface:
+
+| port | package | shell | delete | no picker | background |
 |---|---|---|---|---|---|
 | `FakeFsPort` | `@mp/core` | tests, evals | yes (in memory) | yes | yes |
 | `NodeFsPort` | `@mp/port-node` | Electron | yes | yes | yes |
-| `FsaaFsPort` | `@mp/port-fsaa` | PWA | yes, after a grant | **no** | **no** |
+| `FsaaFsPort` | `@mp/port-fsaa` | PWA | after a grant | **no** | **no** |
 
-The UI branches on `port.capabilities`, never on `isElectron`. A shell
-difference is data, not a code path - and the values come from one table,
-`SHELL_CAPABILITIES` in core, which the ports and the UI both read, so the
-matrix a user sees cannot drift from what the port does.
+The fake port exists because two shells needed the abstraction anyway. It then
+turned out to be the thing that makes generated code verifiable: evals run
+headless, in milliseconds, with no Mac and no disk, and deterministically —
+scans take `now` as an option and fixtures carry `ageDays`.
 
-`pnpm check:arch` fails the build if anything in `core` imports `node:*`,
-`electron`, or touches a DOM global, and holds `packages/ui` to the same rule
-minus the DOM. That guard is why the same core compiles into both shells.
+That is the argument in one line: **the architecture that made two shells
+possible is the architecture that made an agent's output checkable.**
 
-Two boundaries, not one: `FsPort` bounds the **domain**, and `ScanReport` plus
-`PortCapabilities` bounds the **UI**. The web shell happens to run both sides
-in one process; the desktop shell puts a process boundary between them. Neither
-the core nor the UI notices.
+Two boundaries, not one. `FsPort` bounds the domain; `ScanReport` plus
+`PortCapabilities` bounds the UI. The web shell runs both sides in one process;
+the desktop shell puts a process boundary between them. Neither the core nor
+the UI notices.
 
-## PWA and desktop: what differs, and why
+## The two shells
 
-The web build is a real product surface, not a demo of the desktop one. The
-user picks a folder and gets a report; rules outside that folder come back as
-*skipped, with a reason*, which the engine treats as a normal outcome rather
-than a failure.
+![Removing something, in the browser](docs/screenshots/web-delete.gif)
 
-It can delete, too. The picker asks for read only, and readwrite is requested
-from the click that needs it - a scan never costs more permission than a scan
-needs.
+The capability matrix in the rail is rendered from `SHELL_CAPABILITIES` — the
+same table the ports import — so the UI branches on `port.capabilities`, never
+on `isElectron`, and the matrix cannot drift from what the ports do.
 
-And then macOS bites. Chromium blocks `~/Library` and everything under it for
-the File System Access API (`kBlockAllChildren`, in
-`chrome_file_system_access_permission_context.cc`), so `~/Library/Caches`,
-`~/Library/Logs` and Xcode's DerivedData - the three places a Mac actually
-hoards - cannot be handed to a tab at all, however the user answers the dialog.
-The app says so on those cards rather than letting the picker fail mysteriously,
-and offers `~/.npm/_cacache`, which is outside `~/Library` and works: 379 MB on
-the machine this was written on.
+**The web shell** picks a folder and scans it. Then macOS bites: Chromium
+blocks `~/Library` and everything under it for the File System Access API
+(`kBlockAllChildren`, in `chrome_file_system_access_permission_context.cc`), so
+`~/Library/Caches`, `~/Library/Logs` and Xcode's DerivedData — the three places
+a Mac actually hoards — cannot be handed to a tab at all, however the user
+answers the dialog. The app says so on those cards instead of failing
+mysteriously, and offers `~/.npm/_cacache`, which works.
 
 That is the sharpest version of why the desktop shell exists. Not "the browser
-is slower" - the browser is not allowed.
+is slower" — the browser is not allowed.
 
-What the desktop build has that a browser cannot: the whole home directory with
-no picker, background scanning from the tray, and a real trust boundary - the
-renderer asks, and a separate process decides.
+It also ships a **simulated disk** on the Origin Private File System, so the
+whole flow including a real deletion can be tried in any browser without
+granting the page anything. Its paths are labelled as simulated everywhere they
+appear — an earlier version was not, and a deletion that worked perfectly
+looked broken because the folder it named was still sitting on disk.
 
-`apps/web` is that shell, built on the same core:
+![The desktop shell](docs/screenshots/desktop.png)
 
-- the capability matrix in the rail is rendered from `port.capabilities`, so
-  the three dark lamps in the `web` column are data, not a screenshot
-- rules outside the picked folder appear under *not evaluated here* with the
-  reason the engine gave
-- a summary line says how many findings are `safe`, how many need a look, and
-  how many this build will actually remove - the counts come from the report,
-  never from a hand-written number
-- `safe` rows carry a delete button; pressing one either removes for real or
-  says why it will not
-- the last report per mount is kept in IndexedDB, so an offline launch still
-  shows something
-- service worker and manifest via `vite-plugin-pwa`; it installs
+**The desktop shell** runs the scan in a **utility process**, not in main.
+Walking a real `~/Library/Caches` is hundreds of thousands of stat calls; on
+main's event loop that is the window freezing while it happens, since main also
+serves window events, IPC and the tray. Out there it is someone else's event
+loop — and cancelling is `child.kill()` rather than a flag the walk has to
+remember to check. The renderer gets a finished `ScanReport` over IPC and holds
+no fs, no rules, and no core logic beyond types.
 
-All three ports are held to the same contract test: each one scans the same
-fixture and must report the same findings. The web port's test drives a
-hand-rolled `FileSystemDirectoryHandle`, since the real API needs an OS picker
-dialog that no test runner can open.
-
-`showDirectoryPicker()` is Chromium-only today, and the app says so plainly
-instead of failing - Firefox and Safari get an explanation and the OPFS
-sandbox, not a blank page.
-
-## The harness: rules that cannot be written wrong
-
-The fake port exists for the two shells - and it turned out to be the thing
-that makes generated code verifiable. Evals run headless in CI, in
-milliseconds, with no Mac and no disk, and they are deterministic: scans take
-`now` as an option and fixtures carry `ageDays`.
-
-Four gates, cheapest first (`pnpm gates`):
-
-```
-typecheck        types across all four packages
-check:arch       core stays platform-free
-test             unit + a cross-port contract test
-eval             every rule, against fixtures that ship with the repo
-```
-
-Each rule is an eval case with four checks:
-
-```
-schema_valid          parses against RuleSchema, allowlist refinements included
-registered_in         actually wired into rules/index.ts
-runs_against          finds >= 1 thing in its fixture, and nothing under ~/Documents
-no_platform_imports   the architecture guard, run per rule
-```
-
-## Rails: how QA and PM add a rule
-
-The door is deliberately narrow. There is exactly one thing a non-engineer can
-submit, and it is a form, not a prompt:
-
-```bash
-pnpm rule:new packages/harness/examples/pip-cache.spec.json
-```
-
-The spec (`packages/harness/src/spec/rule-spec.ts`) is validated *before*
-anything is generated, and it writes three things: a fixture, an eval case, and
-a deterministic prompt. Same spec in, same prompt out - so a bad result is a
-bug in the recipe, never "the PM phrased it oddly".
-
-The full path, written for the people who use it, is in
-[docs/adding-a-rule.md](docs/adding-a-rule.md).
-
-Four constraints are administrative, enforced by machine, not by review:
-
-- **Path allowlist.** A spec pointing at `~/Documents` is rejected with a
-  sentence, before generation. Try `examples/rejected.spec.json`.
-- **No `dangerous` from a spec.** `RuleSchema` refuses `origin: 'spec'` with
-  `safety: 'dangerous'`. The most likely way to hurt a user is closed off.
-- **No new dependencies.** A CI step fails on any `package.json` change.
-- **Bounded file scope.** The prompt names the four files that may change; the
-  rest of the tree is not the agent's to touch.
-
-What the requester sees at the end is not a diff:
-
-```
-Rule "Poetry cache" is ready.
-Found 2 folders, 328 KB in the sample data.
-Level: safe to delete.
-```
-
-Merge stays with an engineer - but review is a minute, because every machine
-check is already green.
-
-## The desktop shell
-
-`apps/desktop` is the same core with the other port under it, and the split is
-where Electron actually earns its keep:
-
-- the scan runs in the **main process** over `node:fs`; the renderer receives a
-  finished `ScanReport` over IPC and has no fs, no rules and no core logic
-  beyond types
-- a scan runs at launch, before anyone asks - the capability the browser cannot
-  have - and reports through a native notification and the tray
-- deletion is real, and every path the renderer asks for is re-checked in main:
-  it must appear in the report main itself produced, still pass the allowlist,
-  and not belong to a `dangerous` rule - then a native dialog asks the human.
-  `partitionRemovable` is unit tested against tampered reports.
-
-The three safety levels are the same in both shells: `safe` is offered for
-removal, `review` is listed but never removed for you, and `dangerous` is
-report-only and refused by main.
-
-Both shells render the same `packages/ui`. The only thing that differs is the
-data: the capability matrix, the presence of a delete button, whether a folder
-had to be picked.
+Deletion is real, and treated as a boundary: every path the renderer asks for
+is re-checked in main against the report main itself produced, against the
+allowlist, and against the deletion policy — and then a native dialog asks the
+human.
 
 ## What v0.0.1 will actually delete
 
-One folder, on purpose.
-
-The delete path is real and completely wired in both shells - permission grant,
-native confirm, the removal itself, the rescan afterwards. But a demo of an
-architecture has no business emptying a stranger's Homebrew cache because a
-rule was slightly wrong, so `deletionVerdict` in core fences removal to the
-`sandbox` rule. Every other `safe` finding offers the button and then answers
-with a reason.
+One folder, on purpose. The delete path is real and completely wired in both
+shells, but a demo of an architecture has no business emptying a stranger's
+Homebrew cache because a rule was slightly wrong.
 
 ```bash
-pnpm demo:sandbox   # ReclaimSandbox, with a test.txt in it
+pnpm demo:sandbox
 ```
 
 It makes two, because a browser may not open anything under `~/Library`: the
-desktop app finds `~/Library/Caches/ReclaimSandbox`, and the web app finds
-`~/.cache/ReclaimSandbox` when you pick **Local caches** (press cmd-shift-. in
-the dialog to see hidden folders). Press remove on **Reclaim sandbox** and it
-goes for real. Press it on anything else and the app tells you why it will not.
-
-The web app also offers **a built-in sandbox** that needs no folder access at
-all: a tree in the Origin Private File System, which every modern browser has.
-The same `FsaaFsPort`, engine and rules run over it, so the whole path -
-including a real deletion - can be watched in Firefox and Safari, where
-`showDirectoryPicker()` does not exist.
+desktop app finds `~/Library/Caches/ReclaimSandbox`, the web app finds
+`~/.cache/ReclaimSandbox` under **Local caches** (cmd-shift-. reveals hidden
+folders in the dialog). Everything else offers the button and then explains why
+it will not act.
 
 Shipping for real means adding the other `safe` rules to one list in
-`packages/core/src/safety/deletion-policy.ts`. Nothing else in the codebase
-changes - and on the desktop side `partitionRemovable` enforces the same policy
-in the main process, because the renderer is not trusted to enforce it.
+`packages/core/src/safety/deletion-policy.ts`. Nothing else changes.
 
 ## Running it
 
 ```bash
 pnpm install
-pnpm gates        # typecheck, arch guard, tests, evals, both shell builds
+pnpm gates          # typecheck, arch guard, tests, evals, both shell builds
 pnpm dev:web
+pnpm demo:home && RECLAIM_HOME="$PWD/.demo-home" pnpm dev:desktop
 ```
 
-The desktop app deletes files for real, so point it at a throwaway tree:
+`RECLAIM_HOME` must be absolute — Electron's working directory is
+`apps/desktop`, not the shell you typed it in — and the app says so on screen
+when the path does not resolve.
+
+To see what the rules would report here, with no UI at all:
 
 ```bash
-pnpm demo:home
-RECLAIM_HOME="$PWD/.demo-home" pnpm dev:desktop
-```
-
-`RECLAIM_HOME` must be absolute - Electron's working directory is
-`apps/desktop`, not the shell you typed it in. A relative path used to produce
-an empty report that looked exactly like a clean disk; now the app resolves it
-and says so on screen.
-
-To see what the rules would report without any UI at all:
-
-```bash
-pnpm dry-run                        # every rule, this machine, read-only
+pnpm dry-run                        # every rule, read-only
 pnpm dry-run --rule stale-app-logs
 ```
 
-## Status
+The screenshots above are regenerated by the app itself
+(`RECLAIM_SHOT=… pnpm dev:desktop`), so they show whatever it currently renders
+rather than something cropped by hand six versions ago.
 
-Core, all three ports, the harness, and both shells are done and green.
-Building the desktop shell needed no change to the core and no new rule - only
-the `NodeFsPort` that already existed and already passed a contract test
-against the fake port.
+## Not done, deliberately
 
-That build order was the point: start with a shell and platform code leaks into
-the domain.
+Packaging and code signing. `electron-builder`, notarisation and an update
+channel are real work, and none of it would say anything new about the
+architecture or the harness — which is what this repository is for.
 
-Not done, and deliberately: packaging and code signing. `electron-builder`,
-notarisation and an update channel are real work that would say nothing new
-about the architecture.
+The QA/PM spec is a JSON file and one command; the web form, the automatic
+branch and the preview build are designed but not built. Everything described
+above as machine-checked genuinely is.
