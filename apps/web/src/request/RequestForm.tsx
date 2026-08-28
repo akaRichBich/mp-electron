@@ -14,13 +14,54 @@ import { RuleSpec, ruleIdFor } from '@mp/harness/spec'
 
 const CATEGORIES = ['cache', 'logs', 'build-artifacts', 'package-manager'] as const
 
-const EXAMPLE = {
-  what: 'Go build cache',
-  paths: ['~/Library/Caches/go-build'],
-  explain: 'Compiled Go packages kept between builds. The next `go build` recreates what it needs.',
-  category: 'build-artifacts' as const,
-  requestedBy: 'qa@example.com',
+/** Where a submitted spec goes. The repo the form itself is served from. */
+const REPO = 'akaRichBich/mp-electron'
+
+interface Preset {
+  label: string
+  what: string
+  paths: string[]
+  explain: string
+  category: (typeof CATEGORIES)[number]
+  safety: 'safe' | 'review'
+  match: 'whole-folder' | 'by-pattern'
+  pattern?: string
+  minAgeDays?: string
 }
+
+const PRESETS: Preset[] = [
+  {
+    label: 'Go build cache',
+    what: 'Go build cache',
+    paths: ['~/Library/Caches/go-build'],
+    explain:
+      'Compiled Go packages kept between builds. The next `go build` recreates what it needs.',
+    category: 'build-artifacts',
+    safety: 'safe',
+    match: 'whole-folder',
+  },
+  {
+    label: 'Yarn cache',
+    what: 'Yarn cache',
+    paths: ['~/Library/Caches/Yarn', '~/.cache/yarn'],
+    explain: 'Packages Yarn keeps so a reinstall is offline. It refetches whatever it needs.',
+    category: 'package-manager',
+    safety: 'safe',
+    match: 'whole-folder',
+  },
+  {
+    label: 'Old Xcode archives',
+    what: 'Old Xcode archives',
+    paths: ['~/Library/Developer/Xcode/Archives'],
+    explain:
+      'Builds you archived for submission. Keep the ones you might have to symbolicate a crash against.',
+    category: 'build-artifacts',
+    safety: 'review',
+    match: 'by-pattern',
+    pattern: '*',
+    minAgeDays: '90',
+  },
+]
 
 function starterSizes(index: number): number {
   return [41_000_000, 6_500_000][index % 2]!
@@ -72,17 +113,29 @@ export function RequestForm({ onBack }: { onBack: () => void }) {
   const json = JSON.stringify(spec, null, 2)
   const id = what.trim() ? ruleIdFor({ what }) : 'your-rule'
 
-  function loadExample() {
-    setWhat(EXAMPLE.what)
-    setPaths([...EXAMPLE.paths])
-    setCategory(EXAMPLE.category)
-    setExplain(EXAMPLE.explain)
-    setRequestedBy(EXAMPLE.requestedBy)
-    setSafety('safe')
-    setMatch('whole-folder')
-    setMinAgeDays('')
+  function load(preset: Preset) {
+    setWhat(preset.what)
+    setPaths([...preset.paths])
+    setCategory(preset.category)
+    setExplain(preset.explain)
+    setSafety(preset.safety)
+    setMatch(preset.match)
+    setPattern(preset.pattern ?? '*')
+    setMinAgeDays(preset.minAgeDays ?? '')
+    setRequestedBy(requestedBy || 'qa@example.com')
     setSizes({})
   }
+
+  /**
+   * GitHub's own editor, opened with the file already written. Their session,
+   * their commit - no token to paste, no OAuth app, no backend. The commit
+   * dialog is where the branch and the pull request get made.
+   */
+  const prUrl =
+    `https://github.com/${REPO}/new/main` +
+    `?filename=${encodeURIComponent(`packages/harness/examples/${id}.spec.json`)}` +
+    `&value=${encodeURIComponent(json + '\n')}` +
+    `&message=${encodeURIComponent(`Request a rule for ${what || 'a cleanup target'}`)}`
 
   function download() {
     const url = URL.createObjectURL(new Blob([json], { type: 'application/json' }))
@@ -107,11 +160,22 @@ export function RequestForm({ onBack }: { onBack: () => void }) {
           later.
         </p>
 
-        <p>
-          <button className="button" data-variant="quiet" onClick={loadExample}>
-            fill in a worked example
-          </button>
-        </p>
+        <div className="field">
+          <span>Start from an example</span>
+          <div className="field-row">
+            {PRESETS.map((preset) => (
+              <button
+                className="button"
+                data-variant="quiet"
+                key={preset.label}
+                onClick={() => load(preset)}
+              >
+                {preset.label}
+              </button>
+            ))}
+          </div>
+          <em>Fills every field with a request that already validates. Edit anything from there.</em>
+        </div>
 
         <label className="field">
           <span>What are we looking for?</span>
@@ -261,10 +325,26 @@ export function RequestForm({ onBack }: { onBack: () => void }) {
           </button>
         </div>
 
+        <a
+          className="button"
+          data-variant={parsed.success ? undefined : 'quiet'}
+          href={parsed.success ? prUrl : undefined}
+          target="_blank"
+          rel="noreferrer"
+          aria-disabled={!parsed.success}
+        >
+          open a pull request on GitHub →
+        </a>
+
         <p className="request-next">
-          Then an engineer runs one command, and CI takes it from there:
-          <code>pnpm rule:new {id}.spec.json</code>
-          Making the branch and the pull request from this page is not built yet — see the README.
+          That opens GitHub's editor with this file already written. Committing it there is where
+          the branch and the pull request get made — under your account, with no token pasted
+          anywhere and no server in between.
+          <span>
+            A workflow then validates the spec on the branch, generates the fixture and the eval
+            case, and pushes them back. CI goes red with <code>rule is not in the registry</code>
+            until someone writes the rule.
+          </span>
         </p>
       </aside>
     </div>

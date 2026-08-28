@@ -1,0 +1,93 @@
+name: spec
+
+# A pull request that adds a rule request. The form opens it; this turns the
+# spec into the fixture and the eval case, and reports what CI now says.
+on:
+  pull_request:
+    paths:
+      - 'packages/harness/examples/*.spec.json'
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  generate:
+    # A fork's token is read-only, so it cannot push the generated files back.
+    if: github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.ref }}
+          fetch-depth: 0
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+        env:
+          ELECTRON_SKIP_BINARY_DOWNLOAD: 1
+
+      - name: turn each new spec into a fixture and an eval case
+        id: generate
+        run: |
+          set -euo pipefail
+          base="origin/${{ github.event.pull_request.base.ref }}"
+          specs=$(git diff --name-only --diff-filter=AM "$base"...HEAD -- 'packages/harness/examples/*.spec.json')
+          if [ -z "$specs" ]; then
+            echo "nothing to do"; echo "generated=" >> "$GITHUB_OUTPUT"; exit 0
+          fi
+          for spec in $specs; do
+            echo "::group::$spec"
+            pnpm rule:new "$spec"
+            echo "::endgroup::"
+          done
+          echo "generated<<EOF" >> "$GITHUB_OUTPUT"
+          echo "$specs" >> "$GITHUB_OUTPUT"
+          echo "EOF" >> "$GITHUB_OUTPUT"
+
+      - name: push the generated files back to the branch
+        if: steps.generate.outputs.generated != ''
+        run: |
+          git config user.name "reclaim-bot"
+          git config user.email "noreply@github.com"
+          if git diff --quiet; then
+            echo "already up to date"; exit 0
+          fi
+          git add packages/harness/fixtures packages/harness/src/eval/cases
+          git commit -m "Generate the fixture and eval case for this request"
+          git push origin "HEAD:${{ github.event.pull_request.head.ref }}"
+
+      - name: run the evals and say what they found
+        if: steps.generate.outputs.generated != ''
+        id: evals
+        run: |
+          set +e
+          pnpm eval > eval.txt 2>&1
+          echo "status=$?" >> "$GITHUB_OUTPUT"
+          cat eval.txt
+
+      - name: report on the pull request
+        if: steps.generate.outputs.generated != ''
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          {
+            if [ "${{ steps.evals.outputs.status }}" = "0" ]; then
+              echo "### The rule is ready"
+              echo
+              echo "Every gate is green. A human still merges — but everything a machine can check already passed."
+            else
+              echo "### Spec accepted. The rule itself is not written yet."
+              echo
+              echo "The fixture and the eval case are on this branch now. The evals are red because the rule does not exist — which is the expected state at this point, and exactly what an engineer or an agent picks up from here, following \`recipes/add-rule.md\`."
+            fi
+            echo
+            echo '```'
+            cat eval.txt
+            echo '```'
+          } > comment.md
+          gh pr comment "${{ github.event.pull_request.number }}" --body-file comment.md
+          exit ${{ steps.evals.outputs.status }}

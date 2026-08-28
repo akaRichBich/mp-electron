@@ -20,16 +20,16 @@ The harness itself works end to end today. The spec schema, the path fence, the
 gates and the per-rule evals all run — a request really does become a rule that
 CI has checked, and the transcript further down is a real one.
 
-There is a [form](https://akarichbich.github.io/mp-electron/#request) too, so
-the request itself needs no engineer: it validates against the same schema as
-the CLI, refuses a bad path while you type, and exports a spec file that
-`pnpm rule:new` accepts unchanged.
+The [form](https://akarichbich.github.io/mp-electron/#request) closes the loop:
+it validates against the same schema as the CLI, refuses a bad path while you
+type, and opens a pull request on GitHub — under your own account, with no
+token pasted anywhere and no server in between. A workflow then generates the
+fixture and the eval case on that branch and comments with what the evals say.
 
-What does not exist is everything after that. The spec file is handed over by a
-human — no branch, no pull request, no preview build is created from the page.
-Read the sections below as *the machinery a self-service tool needs*, which is
-built and checked, rather than as a finished self-service product, which this
-is not.
+What is still missing is a preview build of the change, and any authorship
+beyond GitHub's own editor. Read the sections below as *the machinery a
+self-service tool needs*, which is built and checked, rather than as a polished
+product, which this is not.
 
 ![The web shell after a scan](docs/screenshots/web.png)
 
@@ -60,6 +60,15 @@ for.
 
 There is no third safety level to choose: `dangerous` exists in the contract
 and the form cannot select it.
+
+**Submitting is the whole cycle, and none of it needs a secret.** The button
+opens GitHub's editor with the spec file already written; committing there is
+where the branch and the pull request are made, as the person doing it. A
+workflow picks the pull request up, runs `pnpm rule:new` on the new spec,
+pushes the generated fixture and eval case back to the branch, and comments
+with the eval output — red, saying `rule is not in the registry`, which is the
+correct state until someone writes the rule. That comment is what the requester
+reads instead of a diff.
 
 
 
@@ -276,7 +285,7 @@ Packaging and code signing. `electron-builder`, notarisation and an update
 channel are real work, and none of it would say anything new about the
 architecture or the harness — which is what this repository is for.
 
-Automatic branches, pull requests and preview builds from the request form.
-The form exports a valid spec file; a human still carries it the last step.
-That gap is the difference between the proof of concept described at the top
-and a finished self-service product.
+A preview build of the change, and any authorship story beyond GitHub's own
+editor. Fork pull requests get a read-only token, so the generation step only
+runs for branches in this repository — stated in the workflow rather than left
+to be discovered.
