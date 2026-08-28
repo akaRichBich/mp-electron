@@ -1,9 +1,0 @@
-{
-  "name": "yarn-cache",
-  "files": {
-    "~/Library/Caches/Yarn/sample-1.bin": 41000000,
-    "~/Library/Caches/Yarn/sample-2.bin": 6500000,
-    "~/.cache/yarn/sample-1.bin": 41000000,
-    "~/.cache/yarn/sample-2.bin": 6500000
-  }
-}
