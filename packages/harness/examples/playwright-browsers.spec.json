@@ -1,0 +1,17 @@
+{
+  "what": "Playwright browsers",
+  "paths": [
+    "~/Library/Caches/ms-playwright"
+  ],
+  "match": "whole-folder",
+  "category": "cache",
+  "safety": "review",
+  "explain": "Browser builds Playwright downloads for tests. Removing them means the next test run downloads them again.",
+  "fixture": {
+    "files": {
+      "~/Library/Caches/ms-playwright/sample-1.bin": 41000000,
+      "~/Library/Caches/ms-playwright/sample-2.bin": 6500000
+    }
+  },
+  "requestedBy": "qa@example.com"
+}
