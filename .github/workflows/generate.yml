@@ -61,6 +61,8 @@ jobs:
       # subscription generates the second with `claude setup-token` locally,
       # which means this job needs no API credits at all.
       - name: let the agent write it
+        id: agent
+        continue-on-error: true
         uses: anthropics/claude-code-action@v1
         with:
           anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
@@ -141,7 +143,11 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           {
-            if [ "${{ steps.gates.outputs.status }}" = "0" ]; then
+            if [ "${{ steps.agent.outcome }}" != "success" ]; then
+              echo "### The agent never ran"
+              echo
+              echo "The job could not start it, so nothing was written and nothing was pushed. This is a setup problem rather than anything about the request; the log of the \`let the agent write it\` step says which one."
+            elif [ "${{ steps.gates.outputs.status }}" = "0" ]; then
               echo "### The rule is written, and every gate is green"
               echo
               echo "Nothing left that a machine can check. A human still merges."
@@ -163,4 +169,5 @@ jobs:
             echo '```'
           } > comment.md
           gh pr comment "${{ github.event.pull_request.number }}" --body-file comment.md
+          if [ "${{ steps.agent.outcome }}" != "success" ]; then exit 1; fi
           exit ${{ steps.gates.outputs.status || 1 }}
