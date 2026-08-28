@@ -1,0 +1,20 @@
+{
+  "what": "Yarn cache",
+  "paths": [
+    "~/Library/Caches/Yarn",
+    "~/.cache/yarn"
+  ],
+  "match": "whole-folder",
+  "category": "package-manager",
+  "safety": "safe",
+  "explain": "Packages Yarn keeps so a reinstall is offline. It refetches whatever it needs.",
+  "fixture": {
+    "files": {
+      "~/Library/Caches/Yarn/sample-1.bin": 41000000,
+      "~/Library/Caches/Yarn/sample-2.bin": 6500000,
+      "~/.cache/yarn/sample-1.bin": 41000000,
+      "~/.cache/yarn/sample-2.bin": 6500000
+    }
+  },
+  "requestedBy": "qa@example.com"
+}
