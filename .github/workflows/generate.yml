@@ -181,7 +181,10 @@ jobs:
             fi
             echo
             echo '```'
-            tail -40 "$RUNNER_TEMP/gates.txt" 2>/dev/null || echo "the gates did not run"
+            # Vite and vitest colour their output; raw escapes in a comment
+            # read as line noise.
+            sed -E 's/\x1b\[[0-9;]*[a-zA-Z]//g' "$RUNNER_TEMP/gates.txt" 2>/dev/null \
+              | tail -40 || echo "the gates did not run"
             echo '```'
           } > comment.md
           gh pr comment "${{ github.event.pull_request.number }}" --body-file comment.md

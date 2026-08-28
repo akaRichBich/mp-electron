@@ -91,7 +91,7 @@ jobs:
             fi
             echo
             echo '```'
-            cat eval.txt
+            sed -E 's/\x1b\[[0-9;]*[a-zA-Z]//g' eval.txt
             echo '```'
           } > comment.md
           gh pr comment "${{ github.event.pull_request.number }}" --body-file comment.md
