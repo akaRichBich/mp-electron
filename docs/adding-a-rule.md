@@ -48,8 +48,15 @@ and a deterministic prompt. A refused spec writes nothing and explains why.
 
 ## What happens next
 
-The prompt goes to an agent, which follows `recipes/add-rule.md`. Then
-`pnpm gates` runs, cheapest first: `typecheck`, `check:arch`, `test`, `eval`,
+**Submit** opens GitHub's editor with the spec file already written; committing
+it there creates the branch and the pull request, as you. A workflow then
+writes the fixture and the eval case onto that branch and comments with what
+the evals say - red at first, because the rule does not exist yet.
+
+An engineer labels the pull request `generate`, and an agent writes the rule in
+CI, following `recipes/add-rule.md`. Whatever it touched outside the four files
+your request may change is reverted before anything is pushed, and named in the
+comment. Then `pnpm gates` runs, cheapest first: `typecheck`, `check:arch`, `test`, `eval`,
 and a build of both shells. Your rule's own eval checks four things:
 
 - `schema_valid` - matches the contract, allowlist included
@@ -72,7 +79,8 @@ only judgment is left.
 
 ## Honest status
 
-The form and the validation are real, and so is everything described above as
-machine-checked. What is not built: the page cannot open a branch, a pull
-request or a preview build for you - you send someone the exported spec file
-and they run one command.
+All of the above runs today; [PR #5](https://github.com/akaRichBich/mp-electron/pull/5)
+is one clean pass through it. What is not built: a preview deployment of your
+change, so you can see the rule in the app before it is merged. Submission also
+finishes in GitHub's own editor rather than through a direct API integration,
+which means you need a GitHub account to file the request.

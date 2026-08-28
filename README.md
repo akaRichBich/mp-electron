@@ -26,10 +26,11 @@ type, and opens a pull request on GitHub — under your own account, with no
 token pasted anywhere and no server in between. A workflow then generates the
 fixture and the eval case on that branch and comments with what the evals say.
 
-What is still missing is a preview build of the change, and any authorship
-beyond GitHub's own editor. Read the sections below as *the machinery a
-self-service tool needs*, which is built and checked, rather than as a polished
-product, which this is not.
+What is still missing is a per-PR preview deployment. Submission currently
+finishes in GitHub's editor rather than through a direct GitHub API
+integration. Read the sections below as *the machinery a self-service tool
+needs*, which is built and checked, rather than as a polished product, which
+this is not.
 
 ![The web shell after a scan](docs/screenshots/web.png)
 
@@ -76,12 +77,16 @@ budget that an unlabelled pull request could otherwise spend. `generate.yml`
 does it when someone labels the pull request `generate` — and then enforces
 the fence rather than asking for it. Whatever the agent touched outside the
 four files that request may change is reverted before anything is pushed, and
-named in the comment. It needs the Claude GitHub App installed on the repository as well as one of
-the two secrets, so the job itself is not yet exercised end to end — but the two things it depends on are
-not: the scope check is tested against a deliberately over-reaching change, and
-the agent step has been run for real, locally, on
-[#2](https://github.com/akaRichBich/mp-electron/pull/2), by an agent given
-nothing but the prompt `pnpm rule:prompt` renders.
+named in the comment.
+
+The complete workflow has been exercised in GitHub Actions.
+[PR #5](https://github.com/akaRichBich/mp-electron/pull/5) is a single clean
+pass: a form-created specification, the fixture and the eval case generated and
+reported by the harness, and — once the `generate` label was applied — the rule
+written by an agent in CI inside a file scope the job enforced afterwards.
+Three commits, two comments, every gate green. Setting it up in another
+repository needs the Claude GitHub App installed and one of two secrets
+(`ANTHROPIC_API_KEY`, or `CLAUDE_CODE_OAUTH_TOKEN` from a subscription).
 
 
 
@@ -184,6 +189,32 @@ it cannot happen twice.
 
 The pattern is the point. Gates catch what is mechanically checkable and
 nothing else; everything a human catches becomes a new gate.
+
+### What the harness caught during its first real run
+
+[PR #3](https://github.com/akaRichBich/mp-electron/pull/3) is the same cycle
+before it worked, and it is the more useful artefact of the two. Four
+orchestration bugs, none of which was visible until an agent actually ran in
+CI:
+
+- The job derived the rule id from the spec's **filename**, while the id comes
+  from the request's own words. The file-scope fence then reverted
+  `ios-simulator-caches.ts` — the rule the agent had correctly written — as out
+  of scope. A fence that discards the work it was meant to bound is worse than
+  no fence.
+- The gates step wrote its log into the working tree, where `git add -A`
+  committed it alongside the rule. The push now stages only what the fence
+  permits.
+- The agent action leaves its own credentials on the remote and revokes them
+  when it finishes, so the push has to bring a working token of its own.
+- A `[skip ci]` marker on the bot's commit suppressed **every** workflow event
+  for that SHA, the `labeled` event included — so applying the label did
+  nothing at all: no run, no error, no clue. It had been added to tidy away a
+  pending check, and a push made with `GITHUB_TOKEN` does not retrigger
+  workflows anyway, so it bought nothing and cost the trigger.
+
+Plus a missing `id-token: write`, without which the action could not
+authenticate at all.
 
 ## Why the substrate makes the harness cheap
 
