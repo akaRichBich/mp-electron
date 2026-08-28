@@ -149,7 +149,8 @@ jobs:
             echo "pushed=false" >> "$GITHUB_OUTPUT"
             exit 0
           fi
-          git commit -m "Write the rule this request asked for [skip ci]"
+          # See spec.yml: [skip ci] on a head commit disables the label trigger.
+          git commit -m "Write the rule this request asked for"
           git push origin "HEAD:${{ github.event.pull_request.head.ref }}"
           echo "pushed=true" >> "$GITHUB_OUTPUT"
 

@@ -59,10 +59,12 @@ jobs:
           if git diff --cached --quiet; then
             echo "already up to date"; exit 0
           fi
-          # [skip ci]: this job reports the eval result itself, and a second
-          # run on the bot's own commit only lands in the pull request as a
-          # check waiting to be approved.
-          git commit -m "Generate the fixture and eval case for this request [skip ci]"
+          # No [skip ci] here. It marks the head commit, and GitHub then
+          # suppresses every workflow event for that SHA - including the
+          # `labeled` event the generate job runs on, which made the label
+          # silently do nothing. A push made with GITHUB_TOKEN does not
+          # retrigger workflows anyway, so the marker bought nothing.
+          git commit -m "Generate the fixture and eval case for this request"
           git push origin "HEAD:${{ github.event.pull_request.head.ref }}"
 
       - name: run the evals and say what they found
