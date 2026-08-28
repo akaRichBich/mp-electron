@@ -18,7 +18,8 @@
     "dry-run": "tsx scripts/dry-run.ts",
     "demo:sandbox": "tsx scripts/make-sandbox.ts",
     "shots": "tsx scripts/make-shots.ts",
-    "rule:prompt": "tsx packages/harness/src/cli/rule-prompt.ts"
+    "rule:prompt": "tsx packages/harness/src/cli/rule-prompt.ts",
+    "rule:id": "tsx packages/harness/src/cli/rule-id.ts"
   },
   "devDependencies": {
     "@mp/core": "workspace:^",
