@@ -33,12 +33,23 @@ if (!parsed.success) {
 const spec = parsed.data
 const id = ruleIdFor(spec)
 
+/**
+ * A rule with `minAgeDays` ignores anything newer than that, and the sample
+ * data the form derives is brand new - so the fixture would contain nothing the
+ * rule is allowed to see, and its eval could never pass. Age the samples past
+ * the threshold so the fixture actually exercises the rule that was asked for.
+ */
+const files = Object.fromEntries(
+  Object.entries(spec.fixture.files).map(([path, size]) =>
+    spec.minAgeDays === undefined
+      ? [path, size]
+      : [path, { size, ageDays: spec.minAgeDays + 30 }],
+  ),
+)
+
 const fixturePath = `packages/harness/fixtures/${id}.json`
 mkdirSync(`${repoRoot}packages/harness/fixtures`, { recursive: true })
-writeFileSync(
-  `${repoRoot}${fixturePath}`,
-  JSON.stringify({ name: id, files: spec.fixture.files }, null, 2) + '\n',
-)
+writeFileSync(`${repoRoot}${fixturePath}`, JSON.stringify({ name: id, files }, null, 2) + '\n')
 
 const casePath = `packages/harness/src/eval/cases/${id}.json`
 writeFileSync(
