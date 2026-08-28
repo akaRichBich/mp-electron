@@ -1000,3 +1000,242 @@ body::after {
   border-top: 1px solid var(--line);
   padding-top: 0.6rem;
 }
+
+/* ------------------------------------------------------- request form --- */
+
+.frame-single {
+  grid-template-columns: 1fr;
+}
+
+.request {
+  display: grid;
+  grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr);
+  gap: 0 3.5rem;
+  align-items: start;
+  padding: 2.5rem var(--gutter) 5rem;
+  max-width: 82rem;
+  margin: 0 auto;
+  width: 100%;
+}
+
+.request-title {
+  margin-top: 1.2rem;
+  font-size: clamp(1.9rem, 4vw, 2.7rem);
+}
+
+.request-form {
+  display: grid;
+  gap: 1.5rem;
+  align-content: start;
+  min-width: 0;
+}
+
+.request-form > p,
+.request-form > .lede {
+  margin: 0;
+}
+
+.field {
+  display: grid;
+  gap: 0.45rem;
+  min-width: 0;
+}
+
+.field > span {
+  font-family: var(--mono);
+  font-size: 0.66rem;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.field em {
+  font-style: normal;
+  font-size: 0.76rem;
+  line-height: 1.55;
+  color: var(--faint);
+}
+
+.field em code {
+  font-family: var(--mono);
+  color: var(--steel);
+}
+
+.field input,
+.field select,
+.field textarea {
+  font: inherit;
+  font-size: 0.92rem;
+  font-family: var(--mono);
+  color: var(--text);
+  background: var(--ink-850);
+  border: 1px solid var(--line-hot);
+  border-radius: 2px;
+  padding: 0.55rem 0.7rem;
+  width: 100%;
+  transition: border-color 0.15s ease;
+}
+
+.field textarea {
+  font-family: var(--sans);
+  resize: vertical;
+  line-height: 1.55;
+}
+
+.field input:focus,
+.field select:focus,
+.field textarea:focus {
+  outline: none;
+  border-color: var(--signal);
+}
+
+.field input::placeholder,
+.field textarea::placeholder {
+  color: var(--faint);
+}
+
+.field-row {
+  display: flex;
+  gap: 0.6rem;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.choice {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  font-size: 0.88rem;
+  color: var(--muted);
+  cursor: pointer;
+}
+
+.choice[data-on='true'] {
+  color: var(--text);
+}
+
+.choice input {
+  accent-color: var(--signal);
+  width: auto;
+}
+
+.issues {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 0.25rem;
+}
+
+.issues li {
+  font-size: 0.78rem;
+  line-height: 1.5;
+  color: var(--danger);
+  border-left: 2px solid var(--danger);
+  padding-left: 0.6rem;
+}
+
+.sample {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 8rem auto;
+  gap: 0.6rem;
+  align-items: center;
+}
+
+.sample code {
+  font-family: var(--mono);
+  font-size: 0.74rem;
+  color: var(--muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.sample span {
+  font-family: var(--mono);
+  font-size: 0.7rem;
+  color: var(--faint);
+}
+
+/* ---------------------------------------------------------- the output --- */
+
+.request-output {
+  position: sticky;
+  top: 2.5rem;
+  display: grid;
+  gap: 1rem;
+  min-width: 0;
+}
+
+.verdict {
+  font-family: var(--mono);
+  font-size: 0.68rem;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  padding: 0.45rem 0.7rem;
+  border: 1px solid currentColor;
+  border-radius: 2px;
+  justify-self: start;
+}
+
+.verdict.ok {
+  color: var(--signal);
+  background: rgba(255, 176, 32, 0.06);
+}
+
+.verdict.bad {
+  color: var(--danger);
+  background: rgba(229, 72, 77, 0.06);
+}
+
+.spec-json {
+  margin: 0;
+  background: var(--ink-900);
+  border: 1px solid var(--line);
+  border-radius: 2px;
+  padding: 1rem 1.1rem;
+  font-family: var(--mono);
+  font-size: 0.76rem;
+  line-height: 1.65;
+  color: var(--muted);
+  max-height: 26rem;
+  overflow: auto;
+}
+
+.request-next {
+  display: grid;
+  gap: 0.5rem;
+  font-size: 0.8rem;
+  line-height: 1.6;
+  color: var(--faint);
+  margin: 0;
+  border-top: 1px solid var(--line);
+  padding-top: 1rem;
+}
+
+.request-next code {
+  font-family: var(--mono);
+  font-size: 0.78rem;
+  color: var(--signal);
+  background: var(--ink-850);
+  border: 1px solid var(--line);
+  padding: 0.5rem 0.7rem;
+  border-radius: 2px;
+  overflow-wrap: anywhere;
+}
+
+a.button {
+  text-decoration: none;
+  display: inline-block;
+}
+
+@media (max-width: 62rem) {
+  .request {
+    grid-template-columns: 1fr;
+    gap: 2.5rem;
+  }
+
+  .request-output {
+    position: static;
+  }
+}

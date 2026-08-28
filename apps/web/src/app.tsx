@@ -23,6 +23,7 @@ import { MOUNTS, pickMount, pickerSupported, type Mount } from './platform'
 import { DEMO_MOUNT, demoSupported, openDemoSandbox } from './demo-fs'
 import type { FsaaFsPort } from '@mp/port-fsaa'
 import { loadReports, saveReport } from './history'
+import { RequestForm } from './request/RequestForm'
 
 type Phase =
   | { kind: 'idle' }
@@ -56,6 +57,8 @@ interface NoticeState {
 export function App() {
   const [phase, setPhase] = useState<Phase>({ kind: 'idle' })
   const [installer, setInstaller] = useState<Event | null>(null)
+  // Hash routing, so the form is a link someone can be sent.
+  const [route, setRoute] = useState(() => window.location.hash)
   const [notice, setNotice] = useState<NoticeState | null>(null)
   const [pending, setPending] = useState<Finding | null>(null)
   const [receipt, setReceipt] = useState<{ finding: Finding; session: Freed } | null>(null)
@@ -78,6 +81,12 @@ export function App() {
         )
       }
     })
+  }, [])
+
+  useEffect(() => {
+    const onHash = () => setRoute(window.location.hash)
+    window.addEventListener('hashchange', onHash)
+    return () => window.removeEventListener('hashchange', onHash)
   }, [])
 
   useEffect(() => {
@@ -229,6 +238,14 @@ export function App() {
     }
   }
 
+  if (route === '#request') {
+    return (
+      <div className="frame frame-single">
+        <RequestForm onBack={() => (window.location.hash = '')} />
+      </div>
+    )
+  }
+
   return (
     <div className="frame">
       <Rail
@@ -320,6 +337,15 @@ export function App() {
             />
           </div>
         )}
+
+        <p className="demo-entry">
+          <a className="button" data-variant="quiet" href="#request">
+            request a cleanup rule
+          </a>
+          <span className="ghost">
+            the one thing someone who writes no code can add - a schema, not a prompt
+          </span>
+        </p>
 
         {demoSupported() && (
           <p className="demo-entry">

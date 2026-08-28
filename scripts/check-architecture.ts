@@ -23,6 +23,8 @@ const DOM = [{ pattern: /\b(window|document|navigator|localStorage)\s*\./, why: 
 const ROOTS = [
   { dir: 'packages/core/src', forbidden: [...NODE_AND_ELECTRON, ...DOM] },
   { dir: 'packages/ui/src', forbidden: NODE_AND_ELECTRON },
+  // Shared with the browser form, so it may not reach for node either.
+  { dir: 'packages/harness/src/spec', forbidden: [...NODE_AND_ELECTRON, ...DOM] },
 ]
 
 function walk(dir: string): string[] {
@@ -57,4 +59,4 @@ if (problems.length > 0) {
   process.exit(1)
 }
 
-console.log(`core and ui are platform-free (${checked} files checked)`)
+console.log(`core, ui and the spec are platform-free (${checked} files checked)`)

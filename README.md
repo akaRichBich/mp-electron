@@ -20,11 +20,16 @@ The harness itself works end to end today. The spec schema, the path fence, the
 gates and the per-rule evals all run — a request really does become a rule that
 CI has checked, and the transcript further down is a real one.
 
-What does not exist is the self-service surface around it. The spec is a JSON
-file and one command, not a form a designer or a PM would open; the branch, the
-pull request and the preview build are still made by hand. Read the sections
-below as *the machinery a self-service tool would need*, which is built, rather
-than as the tool itself, which is not.
+There is a [form](https://akarichbich.github.io/mp-electron/#request) too, so
+the request itself needs no engineer: it validates against the same schema as
+the CLI, refuses a bad path while you type, and exports a spec file that
+`pnpm rule:new` accepts unchanged.
+
+What does not exist is everything after that. The spec file is handed over by a
+human — no branch, no pull request, no preview build is created from the page.
+Read the sections below as *the machinery a self-service tool needs*, which is
+built and checked, rather than as a finished self-service product, which this
+is not.
 
 ![The web shell after a scan](docs/screenshots/web.png)
 
@@ -42,9 +47,24 @@ and holds `packages/ui` to the same rule minus the DOM.
 This is not a convention an agent is asked to remember. It is a grep with an
 exit code, and it runs before the tests.
 
-### 2. One recipe for the one repeatable task
+### 2. A request anyone can make, and a recipe for turning it into code
 
-`recipes/add-rule.md` describes adding a cleanup rule and nothing else. The
+![The request form, with a worked example filled in](docs/screenshots/request-form.png)
+
+The form is the schema. Every field is validated against the same `RuleSpec`
+the CLI uses, so a path outside the fence is refused as you type — with the
+sentence the CLI would print — and the export buttons stay disabled until the
+spec is genuinely valid. Sample data is required and derived from the folders
+you named, because inventing plausible file paths is not a thing to ask a PM
+for.
+
+There is no third safety level to choose: `dangerous` exists in the contract
+and the form cannot select it.
+
+
+
+On the other side, `recipes/add-rule.md` describes adding a cleanup rule and
+nothing else. The
 prompt that starts it is *generated*, not written — `pnpm rule:new` renders it
 from a validated spec, so the same request always produces the same prompt, and
 a bad result is a bug in the recipe rather than in someone's phrasing.
@@ -256,6 +276,7 @@ Packaging and code signing. `electron-builder`, notarisation and an update
 channel are real work, and none of it would say anything new about the
 architecture or the harness — which is what this repository is for.
 
-The front door for non-engineers, described at the top: the machinery a
-self-service tool needs is built and checked, the surface a designer or a PM
-would actually touch is not.
+Automatic branches, pull requests and preview builds from the request form.
+The form exports a valid spec file; a human still carries it the last step.
+That gap is the difference between the proof of concept described at the top
+and a finished self-service product.

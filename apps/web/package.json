@@ -20,6 +20,7 @@
     "@mp/port-fsaa": "workspace:*",
     "react": "^19.2.8",
     "react-dom": "^19.2.8",
-    "@mp/ui": "workspace:*"
+    "@mp/ui": "workspace:*",
+    "@mp/harness": "workspace:*"
   }
 }

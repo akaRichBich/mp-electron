@@ -23,8 +23,10 @@ Widening the fence is an engineering decision, deliberately: see
 
 ## Fill in the form
 
-A JSON file, not a prompt - see `packages/harness/examples/go-build.spec.json`
-for a complete one and `packages/harness/src/spec/rule-spec.ts` for the schema.
+<https://akarichbich.github.io/mp-electron/#request> - it validates as you type
+and exports a spec file. Or write the JSON by hand: see
+`packages/harness/examples/go-build.spec.json` for a complete one and
+`packages/harness/src/spec/rule-spec.ts` for the schema.
 
 | field | notes |
 |---|---|
@@ -70,6 +72,7 @@ only judgment is left.
 
 ## Honest status
 
-In v0.0.1 the form is a JSON file and you run one command; the branch, the PR
-and the preview build are still by hand. Everything described above as
-machine-checked genuinely is.
+The form and the validation are real, and so is everything described above as
+machine-checked. What is not built: the page cannot open a branch, a pull
+request or a preview build for you - you send someone the exported spec file
+and they run one command.
