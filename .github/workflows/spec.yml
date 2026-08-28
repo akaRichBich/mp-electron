@@ -53,10 +53,12 @@ jobs:
         run: |
           git config user.name "reclaim-bot"
           git config user.email "noreply@github.com"
-          if git diff --quiet; then
+          # Stage first: the generated files are new, and `git diff` alone does
+          # not see untracked ones - which silently skipped the push.
+          git add packages/harness/fixtures packages/harness/src/eval/cases
+          if git diff --cached --quiet; then
             echo "already up to date"; exit 0
           fi
-          git add packages/harness/fixtures packages/harness/src/eval/cases
           git commit -m "Generate the fixture and eval case for this request"
           git push origin "HEAD:${{ github.event.pull_request.head.ref }}"
 
