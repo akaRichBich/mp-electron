@@ -1215,12 +1215,8 @@ body::after {
 
 .request-next code {
   font-family: var(--mono);
-  font-size: 0.78rem;
-  color: var(--signal);
-  background: var(--ink-850);
-  border: 1px solid var(--line);
-  padding: 0.5rem 0.7rem;
-  border-radius: 2px;
+  font-size: 0.74rem;
+  color: var(--steel);
   overflow-wrap: anywhere;
 }
 
