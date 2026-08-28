@@ -1,0 +1,13 @@
+{
+  "name": "old-xcode-archives",
+  "files": {
+    "~/Library/Developer/Xcode/Archives/sample-1.bin": {
+      "size": 41000000,
+      "ageDays": 120
+    },
+    "~/Library/Developer/Xcode/Archives/sample-2.bin": {
+      "size": 6500000,
+      "ageDays": 120
+    }
+  }
+}
