@@ -1,0 +1,17 @@
+{
+  "what": "iOS Simulator caches",
+  "paths": [
+    "~/Library/Developer/CoreSimulator/Caches"
+  ],
+  "match": "whole-folder",
+  "category": "cache",
+  "safety": "safe",
+  "explain": "Runtime images and caches the simulator rebuilds on demand. Your simulators and their data are elsewhere.",
+  "fixture": {
+    "files": {
+      "~/Library/Developer/CoreSimulator/Caches/sample-1.bin": 41000000,
+      "~/Library/Developer/CoreSimulator/Caches/sample-2.bin": 6500000
+    }
+  },
+  "requestedBy": "pm@example.com"
+}
