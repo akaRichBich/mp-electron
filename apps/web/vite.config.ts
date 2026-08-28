@@ -12,6 +12,8 @@ export default defineConfig({
     react(),
     VitePWA({
       registerType: 'autoUpdate',
+      // Registered by hand in main.tsx, so the update behaviour is ours.
+      injectRegister: null,
       includeAssets: ['icon.svg'],
       manifest: {
         name: 'Reclaim - disk report',
