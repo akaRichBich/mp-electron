@@ -1,0 +1,159 @@
+name: generate
+
+# Deliberately not automatic. Label a pull request `generate` and an agent
+# writes the rule the spec asked for, inside a fence this job enforces
+# afterwards rather than trusting the agent to respect.
+on:
+  pull_request:
+    types: [labeled]
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  write-the-rule:
+    if: >-
+      github.event.label.name == 'generate' &&
+      github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.ref }}
+          fetch-depth: 0
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+        env:
+          ELECTRON_SKIP_BINARY_DOWNLOAD: 1
+
+      - name: find the request and render its prompt
+        id: request
+        run: |
+          set -euo pipefail
+          base="origin/${{ github.event.pull_request.base.ref }}"
+          spec=$(git diff --name-only --diff-filter=AM "$base"...HEAD -- 'packages/harness/examples/*.spec.json' | head -1)
+          if [ -z "$spec" ]; then
+            echo "This pull request adds no rule request." >&2
+            exit 1
+          fi
+          id=$(basename "$spec" .spec.json)
+          echo "id=$id" >> "$GITHUB_OUTPUT"
+          echo "spec=$spec" >> "$GITHUB_OUTPUT"
+          {
+            echo 'prompt<<PROMPT_EOF'
+            pnpm --silent rule:prompt "$spec"
+            echo
+            echo 'Then run `pnpm gates` and make every gate pass. If a gate fails'
+            echo 'three times, stop and leave the failing output in your final message'
+            echo 'rather than trying something else.'
+            echo PROMPT_EOF
+          } >> "$GITHUB_OUTPUT"
+
+      - name: let the agent write it
+        uses: anthropics/claude-code-action@v1
+        with:
+          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+          prompt: ${{ steps.request.outputs.prompt }}
+          claude_args: --max-turns 40 --permission-mode acceptEdits --allowedTools "Read,Write,Edit,Grep,Glob,Bash(pnpm:*)"
+
+      # The fence is enforced here, not asked for in the prompt. Anything the
+      # agent touched outside the four files this request may change is put
+      # back before a single line is pushed.
+      # The fence is enforced here, not asked for in the prompt. Anything the
+      # agent touched outside the four files this request may change is put
+      # back before a single line is pushed.
+      - name: enforce the file scope
+        id: scope
+        run: |
+          set -uo pipefail
+          id="${{ steps.request.outputs.id }}"
+
+          # Written outside the tree, or they would show up as changes of their
+          # own and be reported as out of scope.
+          printf '%s\n' \
+            "packages/core/src/rules/$id.ts" \
+            "packages/core/src/rules/index.ts" \
+            "packages/harness/fixtures/$id.json" \
+            "packages/harness/src/eval/cases/$id.json" > "$RUNNER_TEMP/allowed.txt"
+
+          # --untracked-files=all: without it git reports a new directory as one
+          # entry, and the whole thing would be judged out of scope together.
+          git status --porcelain --untracked-files=all \
+            | sed 's/^...//' | tr -d '"' > "$RUNNER_TEMP/changed.txt"
+
+          reverted=""
+          # `file`, never `path`: in some shells that name is bound to $PATH.
+          while read -r file; do
+            [ -n "$file" ] || continue
+            if grep -qxF "$file" "$RUNNER_TEMP/allowed.txt"; then continue; fi
+            reverted="$reverted $file"
+            if git ls-files --error-unmatch "$file" >/dev/null 2>&1; then
+              git checkout -- "$file"
+            else
+              git clean -fq -- "$file"
+            fi
+          done < "$RUNNER_TEMP/changed.txt"
+
+          if [ -n "$reverted" ]; then
+            echo "out of scope, reverted:$reverted"
+          fi
+          echo "reverted=$reverted" >> "$GITHUB_OUTPUT"
+
+      - name: check the gates
+        id: gates
+        run: |
+          set +e
+          pnpm gates > gates.txt 2>&1
+          echo "status=$?" >> "$GITHUB_OUTPUT"
+          tail -40 gates.txt
+
+      - name: push whatever it produced
+        id: push
+        run: |
+          set -euo pipefail
+          git config user.name "reclaim-bot"
+          git config user.email "noreply@github.com"
+          git add -A
+          if git diff --cached --quiet; then
+            echo "the agent changed nothing"
+            echo "pushed=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          git commit -m "Write the rule this request asked for [skip ci]"
+          git push origin "HEAD:${{ github.event.pull_request.head.ref }}"
+          echo "pushed=true" >> "$GITHUB_OUTPUT"
+
+      - name: say what happened
+        if: always()
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          {
+            if [ "${{ steps.gates.outputs.status }}" = "0" ]; then
+              echo "### The rule is written, and every gate is green"
+              echo
+              echo "Nothing left that a machine can check. A human still merges."
+            else
+              echo "### The agent could not get the gates green"
+              echo
+              echo "Whatever it reached is on the branch, so you can see how far it got and take over from there."
+            fi
+            if [ -n "${{ steps.scope.outputs.reverted }}" ]; then
+              echo
+              echo "Reverted before pushing, because this request may not change them:"
+              echo '```'
+              echo "${{ steps.scope.outputs.reverted }}" | tr ' ' '\n' | sed '/^$/d'
+              echo '```'
+            fi
+            echo
+            echo '```'
+            tail -40 gates.txt 2>/dev/null || echo "the gates did not run"
+            echo '```'
+          } > comment.md
+          gh pr comment "${{ github.event.pull_request.number }}" --body-file comment.md
+          exit ${{ steps.gates.outputs.status || 1 }}

@@ -70,6 +70,15 @@ with the eval output — red, saying `rule is not in the registry`, which is the
 correct state until someone writes the rule. That comment is what the requester
 reads instead of a diff.
 
+Writing the rule is the one step that is not automatic, and it is a deliberate
+line rather than a missing feature: it needs an API key with push rights and a
+budget that an unlabelled pull request could otherwise spend. `generate.yml`
+does it when someone labels the pull request `generate` — and then enforces
+the fence rather than asking for it. Whatever the agent touched outside the
+four files that request may change is reverted before anything is pushed, and
+named in the comment. `ANTHROPIC_API_KEY` is not set in this repository, so the
+job is written and unexercised; the scope check it turns on is tested.
+
 
 
 On the other side, `recipes/add-rule.md` describes adding a cleanup rule and
