@@ -76,8 +76,12 @@ budget that an unlabelled pull request could otherwise spend. `generate.yml`
 does it when someone labels the pull request `generate` — and then enforces
 the fence rather than asking for it. Whatever the agent touched outside the
 four files that request may change is reverted before anything is pushed, and
-named in the comment. `ANTHROPIC_API_KEY` is not set in this repository, so the
-job is written and unexercised; the scope check it turns on is tested.
+named in the comment. Neither secret it accepts is set in this repository, so the
+job itself is written and unexercised — but the two things it depends on are
+not: the scope check is tested against a deliberately over-reaching change, and
+the agent step has been run for real, locally, on
+[#2](https://github.com/akaRichBich/mp-electron/pull/2), by an agent given
+nothing but the prompt `pnpm rule:prompt` renders.
 
 
 

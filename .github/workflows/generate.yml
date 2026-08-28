@@ -54,10 +54,14 @@ jobs:
             echo PROMPT_EOF
           } >> "$GITHUB_OUTPUT"
 
+      # Either secret works; set whichever you have. A Claude Pro/Max
+      # subscription generates the second with `claude setup-token` locally,
+      # which means this job needs no API credits at all.
       - name: let the agent write it
         uses: anthropics/claude-code-action@v1
         with:
           anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
           prompt: ${{ steps.request.outputs.prompt }}
           claude_args: --max-turns 40 --permission-mode acceptEdits --allowedTools "Read,Write,Edit,Grep,Glob,Bash(pnpm:*)"
 
