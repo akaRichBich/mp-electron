@@ -1,0 +1,11 @@
+{
+  "ruleId": "ios-simulator-caches",
+  "fixture": "packages/harness/fixtures/ios-simulator-caches.json",
+  "expect": {
+    "minFindings": 1,
+    "neverTouches": [
+      "~/Documents",
+      "~/Desktop"
+    ]
+  }
+}
