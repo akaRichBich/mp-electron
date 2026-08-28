@@ -8,7 +8,17 @@ import {
   type Finding,
   type ScanReport,
 } from '@mp/core'
-import { Findings, Notice, Rail, Readout, SafetySummary, Skipped } from '@mp/ui'
+import {
+  ConfirmDialog,
+  Findings,
+  Notice,
+  Rail,
+  Readout,
+  Receipt,
+  SafetySummary,
+  Skipped,
+  type Freed,
+} from '@mp/ui'
 import { MOUNTS, pickMount, pickerSupported, type Mount } from './platform'
 import { DEMO_MOUNT, demoSupported, openDemoSandbox } from './demo-fs'
 import type { FsaaFsPort } from '@mp/port-fsaa'
@@ -48,6 +58,9 @@ export function App() {
   const [installer, setInstaller] = useState<Event | null>(null)
   const [notice, setNotice] = useState<NoticeState | null>(null)
   const [pending, setPending] = useState<Finding | null>(null)
+  const [receipt, setReceipt] = useState<{ finding: Finding; session: Freed } | null>(null)
+  const [freed, setFreed] = useState<Freed>({ items: 0, files: 0, bytes: 0 })
+  const [granted, setGranted] = useState(false)
   const [busy, setBusy] = useState(false)
   // Kept so a removal can reuse the folder the user already granted.
   const port = useRef<FsaaFsPort | null>(null)
@@ -156,6 +169,7 @@ export function App() {
     }
 
     setNotice(null)
+    setReceipt(null)
     setPending(finding)
   }
 
@@ -164,7 +178,9 @@ export function App() {
     if (!subject || phase.kind !== 'report') return
     setBusy(true)
     try {
-      if (!(await subject.requestWriteAccess())) {
+      const writable = await subject.requestWriteAccess()
+      setGranted(writable)
+      if (!writable) {
         setPending(null)
         setNotice({
           title: 'Write access was not granted',
@@ -199,14 +215,14 @@ export function App() {
         return
       }
 
+      const session: Freed = {
+        items: freed.items + 1,
+        files: freed.files + finding.entries,
+        bytes: freed.bytes + finding.bytes,
+      }
+      setFreed(session)
       setPending(null)
-      setNotice({
-        title: `Removed ${finding.title}`,
-        detail: phase.mount.simulated
-          ? `${formatBytes(finding.bytes)} freed from the simulated tree at ${finding.path}. Your disk is unchanged.`
-          : `${formatBytes(finding.bytes)} freed from ${finding.path}.`,
-        tone: 'plain',
-      })
+      setReceipt({ finding, session })
       await scanWith(subject, phase.mount, { persist: phase.mount.id !== 'demo' })
     } finally {
       setBusy(false)
@@ -381,26 +397,19 @@ export function App() {
                     />
                     <SafetySummary findings={phase.report.findings} />
 
-                    {pending && (
+                    {receipt && (
                       <div style={{ margin: '1.5rem 0' }}>
-                        <Notice
-                          tone="warn"
-                          title={`Remove ${pending.title}?`}
-                          detail={
+                        <Receipt
+                          what={receipt.finding.title}
+                          where={
                             phase.mount.simulated
-                              ? `${formatBytes(pending.bytes)} across ${pending.entries} file(s) at ${pending.path}, in the simulated tree. Nothing on your disk changes.`
-                              : `${formatBytes(pending.bytes)} across ${pending.entries} file(s) at ${pending.path}. This deletes from disk and cannot be undone.`
+                              ? `${receipt.finding.path} (simulated)`
+                              : receipt.finding.path
                           }
-                          onDismiss={() => setPending(null)}
-                          actions={
-                            <button
-                              className="button"
-                              disabled={busy}
-                              onClick={() => void confirmDelete(pending)}
-                            >
-                              remove for real
-                            </button>
-                          }
+                          files={receipt.finding.entries}
+                          bytes={receipt.finding.bytes}
+                          session={receipt.session}
+                          onDismiss={() => setReceipt(null)}
                         />
                       </div>
                     )}
@@ -445,6 +454,39 @@ export function App() {
             )}
         </>
       </main>
+
+      <ConfirmDialog
+        open={pending !== null}
+        title={pending ? `Remove ${pending.title}?` : ''}
+        lines={
+          pending
+            ? [
+                { label: 'size', value: formatBytes(pending.bytes) },
+                { label: 'files', value: String(pending.entries) },
+                {
+                  label: 'path',
+                  value:
+                    phase.kind === 'report' && phase.mount.simulated
+                      ? `${pending.path} (simulated)`
+                      : pending.path,
+                },
+              ]
+            : []
+        }
+        confirmLabel={
+          phase.kind === 'report' && phase.mount.simulated ? 'delete from the simulation' : 'delete permanently'
+        }
+        busy={busy}
+        onCancel={() => setPending(null)}
+        onConfirm={() => pending && void confirmDelete(pending)}
+        footnote={
+          phase.kind === 'report' && phase.mount.simulated
+            ? 'This is the simulated tree in browser storage. Nothing on your disk changes.'
+            : granted
+              ? 'This deletes from disk and cannot be undone.'
+              : 'This deletes from disk and cannot be undone. The browser will ask you to allow editing this folder next - that prompt is Chrome\u2019s own, and a page cannot replace it.'
+        }
+      />
     </div>
   )
 }

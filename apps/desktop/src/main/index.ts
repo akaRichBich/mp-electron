@@ -165,10 +165,10 @@ ipcMain.handle(CHANNELS.reveal, (_event, path: string) => {
  */
 ipcMain.handle(CHANNELS.remove, async (_event, paths: string[]): Promise<RemoveResult> => {
   const findings = lastReport?.findings ?? []
-  const bytesByPath = new Map(findings.map((finding) => [finding.path, finding.bytes]))
+  const byPath = new Map(findings.map((finding) => [finding.path, finding]))
   const { allowed, refused, bytes } = partitionRemovable(paths, findings)
 
-  if (allowed.length === 0) return { removed: 0, bytes: 0, refused, report: lastReport }
+  if (allowed.length === 0) return { removed: 0, files: 0, bytes: 0, refused, report: lastReport }
 
   const question = {
     type: 'warning' as const,
@@ -182,7 +182,7 @@ ipcMain.handle(CHANNELS.remove, async (_event, paths: string[]): Promise<RemoveR
     ? await dialog.showMessageBox(win, question)
     : await dialog.showMessageBox(question)
 
-  if (response !== 0) return { removed: 0, bytes: 0, refused: [], report: lastReport }
+  if (response !== 0) return { removed: 0, files: 0, bytes: 0, refused: [], report: lastReport }
 
   // A path that throws, or that survives its own removal, is reported back
   // rather than counted as removed.
@@ -199,8 +199,14 @@ ipcMain.handle(CHANNELS.remove, async (_event, paths: string[]): Promise<RemoveR
   }
 
   const report = await runScan({ notify: false })
-  const removedBytes = removed.reduce((sum, path) => sum + (bytesByPath.get(path) ?? 0), 0)
-  return { removed: removed.length, bytes: removedBytes, refused, report }
+  const totals = removed.reduce(
+    (sum, path) => ({
+      files: sum.files + (byPath.get(path)?.entries ?? 0),
+      bytes: sum.bytes + (byPath.get(path)?.bytes ?? 0),
+    }),
+    { files: 0, bytes: 0 },
+  )
+  return { removed: removed.length, files: totals.files, bytes: totals.bytes, refused, report }
 })
 
 void app.whenReady().then(() => {

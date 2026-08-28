@@ -842,3 +842,161 @@ body::after {
   font-size: 0.68rem;
   letter-spacing: 0.02em;
 }
+
+/* ------------------------------------------------------------- dialog --- */
+
+.confirm {
+  border: 1px solid var(--line-hot);
+  background: var(--ink-850);
+  color: var(--text);
+  border-radius: 3px;
+  padding: 1.9rem 2rem 1.6rem;
+  width: min(30rem, calc(100vw - 2.5rem));
+  box-shadow: 0 30px 80px rgba(0, 0, 0, 0.6), 0 0 0 1px rgba(255, 176, 32, 0.08);
+}
+
+.confirm::backdrop {
+  background: rgba(6, 8, 11, 0.74);
+  backdrop-filter: blur(3px);
+}
+
+.confirm[open] {
+  animation: confirm-in 0.22s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+.confirm-eyebrow {
+  font-family: var(--mono);
+  font-size: 0.6rem;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--danger);
+  margin: 0 0 0.6rem;
+}
+
+.confirm h2 {
+  font-size: 1.5rem;
+  font-weight: 700;
+  letter-spacing: -0.025em;
+  line-height: 1.15;
+  margin: 0 0 1.4rem;
+}
+
+.confirm-lines {
+  margin: 0 0 1.3rem;
+  display: grid;
+  gap: 1px;
+  background: var(--line);
+  border: 1px solid var(--line);
+}
+
+.confirm-lines > div {
+  background: var(--ink-800);
+  display: grid;
+  grid-template-columns: 5.5rem minmax(0, 1fr);
+  gap: 0.8rem;
+  padding: 0.6rem 0.8rem;
+  align-items: baseline;
+}
+
+.confirm-lines dt {
+  font-family: var(--mono);
+  font-size: 0.66rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--faint);
+}
+
+.confirm-lines dd {
+  margin: 0;
+  font-family: var(--mono);
+  font-size: 0.82rem;
+  color: var(--text);
+  overflow-wrap: anywhere;
+}
+
+.confirm-footnote {
+  font-size: 0.8rem;
+  line-height: 1.6;
+  color: var(--faint);
+  margin: 0 0 1.4rem;
+  border-left: 2px solid var(--line-hot);
+  padding-left: 0.8rem;
+}
+
+.confirm-actions {
+  display: flex;
+  gap: 0.7rem;
+  flex-wrap: wrap;
+}
+
+.button[data-variant='danger'] {
+  background: var(--danger);
+  border-color: var(--danger);
+  color: #fff;
+}
+
+@keyframes confirm-in {
+  from {
+    opacity: 0;
+    transform: translateY(0.8rem) scale(0.985);
+  }
+}
+
+/* ------------------------------------------------------------ receipt --- */
+
+.receipt-card {
+  border: 1px solid var(--signal-dim);
+  background: linear-gradient(180deg, rgba(255, 176, 32, 0.07), transparent 70%);
+  padding: 1.3rem 1.5rem 1.2rem;
+  display: grid;
+  gap: 0.55rem;
+}
+
+.receipt-card .section-label {
+  color: var(--signal);
+  margin: 0;
+}
+
+.receipt-figures {
+  display: flex;
+  align-items: baseline;
+  gap: 0.65rem;
+  flex-wrap: wrap;
+  font-family: var(--mono);
+  font-size: 0.9rem;
+  color: var(--muted);
+}
+
+.receipt-figures b {
+  font-size: 1.65rem;
+  font-weight: 500;
+  letter-spacing: -0.03em;
+  color: var(--signal);
+  margin-right: 0.2rem;
+}
+
+.receipt-sep {
+  color: var(--faint);
+}
+
+.receipt-where {
+  margin: 0;
+  font-size: 0.86rem;
+  color: var(--muted);
+}
+
+.receipt-where code {
+  font-family: var(--mono);
+  font-size: 0.8rem;
+  color: var(--steel);
+  overflow-wrap: anywhere;
+}
+
+.receipt-session {
+  margin: 0.2rem 0 0;
+  font-family: var(--mono);
+  font-size: 0.72rem;
+  color: var(--faint);
+  border-top: 1px solid var(--line);
+  padding-top: 0.6rem;
+}

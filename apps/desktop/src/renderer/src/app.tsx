@@ -7,7 +7,7 @@ import {
   type Finding,
   type ScanReport,
 } from '@mp/core'
-import { Findings, Notice, Rail, Readout, SafetySummary, Skipped } from '@mp/ui'
+import { Findings, Notice, Rail, Readout, Receipt, SafetySummary, Skipped, type Freed } from '@mp/ui'
 import type { DesktopApi, ScanProgress } from '../../shared/ipc'
 
 declare global {
@@ -22,7 +22,12 @@ export function App() {
   const [report, setReport] = useState<ScanReport | null>(null)
   const [progress, setProgress] = useState<ScanProgress | null>(null)
   const [busy, setBusy] = useState(false)
-  const [receipt, setReceipt] = useState<{ text: string; tone: 'ok' | 'refused' } | null>(null)
+  const [receipt, setReceipt] = useState<
+    { kind: 'removed'; what: string; where: string; files: number; bytes: number; session: Freed }
+    | { kind: 'refused'; text: string }
+    | null
+  >(null)
+  const [freed, setFreed] = useState<Freed>({ items: 0, files: 0, bytes: 0 })
   const [notice, setNotice] = useState<{ title: string; detail: string } | null>(null)
 
   useEffect(() => {
@@ -51,15 +56,26 @@ export function App() {
     try {
       const result = await api.remove(paths)
       if (result.report) setReport(result.report)
-      if (result.refused.length > 0) {
+
+      if (result.removed > 0) {
+        const session: Freed = {
+          items: freed.items + result.removed,
+          files: freed.files + result.files,
+          bytes: freed.bytes + result.bytes,
+        }
+        setFreed(session)
         setReceipt({
-          text: `main refused ${result.refused.length} path(s): not in its own report, or outside the allowlist`,
-          tone: 'refused',
+          kind: 'removed',
+          what: `${result.removed} location${result.removed === 1 ? '' : 's'}`,
+          where: paths.length === 1 ? paths[0]! : `${paths.length} paths`,
+          files: result.files,
+          bytes: result.bytes,
+          session,
         })
-      } else if (result.removed > 0) {
+      } else if (result.refused.length > 0) {
         setReceipt({
-          text: `removed ${result.removed} location(s), ${formatBytes(result.bytes)} reclaimed`,
-          tone: 'ok',
+          kind: 'refused',
+          text: `main refused ${result.refused.length} path(s): not in its own report, outside the allowlist, or not something this build deletes`,
         })
       }
     } finally {
@@ -222,8 +238,21 @@ export function App() {
               </div>
             )}
 
-            {receipt && (
-              <p className="receipt" data-tone={receipt.tone === 'refused' ? 'refused' : 'ok'}>
+            {receipt?.kind === 'removed' && (
+              <div style={{ marginTop: '1.75rem' }}>
+                <Receipt
+                  what={receipt.what}
+                  where={receipt.where}
+                  files={receipt.files}
+                  bytes={receipt.bytes}
+                  session={receipt.session}
+                  onDismiss={() => setReceipt(null)}
+                />
+              </div>
+            )}
+
+            {receipt?.kind === 'refused' && (
+              <p className="receipt" data-tone="refused">
                 {receipt.text}
               </p>
             )}

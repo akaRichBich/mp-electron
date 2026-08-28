@@ -27,7 +27,10 @@ export interface ScanProgress {
 }
 
 export interface RemoveResult {
+  /** Locations actually removed. */
   removed: number
+  /** Files inside them, as the last report counted them. */
+  files: number
   bytes: number
   /** Paths main refused: not in the last report, or outside the allowlist. */
   refused: string[]
