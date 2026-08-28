@@ -1,5 +1,7 @@
 # Reclaim
 
+[![ci](https://github.com/akaRichBich/mp-electron/actions/workflows/ci.yml/badge.svg)](https://github.com/akaRichBich/mp-electron/actions/workflows/ci.yml)
+
 **[Try it →](https://akarichbich.github.io/mp-electron/)** — no install, no
 folder access needed. Works in Firefox and Safari too.
 
@@ -11,6 +13,18 @@ A macOS disk-cleanup utility, built to answer a narrower question:
 The disk cleaner is the substrate. The interesting part is the harness around
 it — and the architecture underneath, which is what makes the harness cheap
 enough to be strict.
+
+### Status: a proof of concept, not a product
+
+The harness itself works end to end today. The spec schema, the path fence, the
+gates and the per-rule evals all run — a request really does become a rule that
+CI has checked, and the transcript further down is a real one.
+
+What does not exist is the self-service surface around it. The spec is a JSON
+file and one command, not a form a designer or a PM would open; the branch, the
+pull request and the preview build are still made by hand. Read the sections
+below as *the machinery a self-service tool would need*, which is built, rather
+than as the tool itself, which is not.
 
 ![The web shell after a scan](docs/screenshots/web.png)
 
@@ -242,6 +256,6 @@ Packaging and code signing. `electron-builder`, notarisation and an update
 channel are real work, and none of it would say anything new about the
 architecture or the harness — which is what this repository is for.
 
-The QA/PM spec is a JSON file and one command; the web form, the automatic
-branch and the preview build are designed but not built. Everything described
-above as machine-checked genuinely is.
+The front door for non-engineers, described at the top: the machinery a
+self-service tool needs is built and checked, the surface a designer or a PM
+would actually touch is not.
