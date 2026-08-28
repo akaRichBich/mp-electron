@@ -10,6 +10,9 @@ on:
 permissions:
   contents: write
   pull-requests: write
+  # The action exchanges an OIDC token to authenticate; without this it fails
+  # with "Unable to get ACTIONS_ID_TOKEN_REQUEST_URL".
+  id-token: write
 
 jobs:
   write-the-rule:
