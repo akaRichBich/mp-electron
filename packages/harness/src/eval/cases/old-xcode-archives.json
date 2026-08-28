@@ -1,0 +1,11 @@
+{
+  "ruleId": "old-xcode-archives",
+  "fixture": "packages/harness/fixtures/old-xcode-archives.json",
+  "expect": {
+    "minFindings": 1,
+    "neverTouches": [
+      "~/Documents",
+      "~/Desktop"
+    ]
+  }
+}
