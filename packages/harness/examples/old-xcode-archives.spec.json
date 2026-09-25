@@ -1,0 +1,19 @@
+{
+  "what": "Old Xcode archives",
+  "paths": [
+    "~/Library/Developer/Xcode/Archives"
+  ],
+  "match": "by-pattern",
+  "pattern": "*",
+  "category": "build-artifacts",
+  "safety": "review",
+  "explain": "Builds you archived for submission. Keep the ones you might have to symbolicate a crash against.",
+  "minAgeDays": 90,
+  "fixture": {
+    "files": {
+      "~/Library/Developer/Xcode/Archives/sample-1.bin": 41000000,
+      "~/Library/Developer/Xcode/Archives/sample-2.bin": 6500000
+    }
+  },
+  "requestedBy": "pm@example.com"
+}
