@@ -1,0 +1,7 @@
+{
+  "name": "ios-simulator-caches",
+  "files": {
+    "~/Library/Developer/CoreSimulator/Caches/sample-1.bin": 41000000,
+    "~/Library/Developer/CoreSimulator/Caches/sample-2.bin": 6500000
+  }
+}
