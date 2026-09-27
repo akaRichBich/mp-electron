@@ -1,0 +1,7 @@
+{
+  "name": "playwright-browsers",
+  "files": {
+    "~/Library/Caches/ms-playwright/sample-1.bin": 41000000,
+    "~/Library/Caches/ms-playwright/sample-2.bin": 6500000
+  }
+}

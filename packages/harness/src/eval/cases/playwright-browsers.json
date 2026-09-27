@@ -1,0 +1,11 @@
+{
+  "ruleId": "playwright-browsers",
+  "fixture": "packages/harness/fixtures/playwright-browsers.json",
+  "expect": {
+    "minFindings": 1,
+    "neverTouches": [
+      "~/Documents",
+      "~/Desktop"
+    ]
+  }
+}
